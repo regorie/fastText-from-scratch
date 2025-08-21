@@ -27,7 +27,7 @@ long long file_size = 0;
 short int n_of_thread;
 int window_size = 5;
 int hidden_size;
-short int min_count = 0;
+int min_count = 5;
 int n_of_words_limit;
 int epoch;
 float starting_lr;
@@ -226,7 +226,7 @@ int main(int argc, char** argv){
         strcpy(input_file, argv[7]);
         strcpy(output_file, argv[8]);
     }
-    starting_lr = 0.05;
+    starting_lr = 0.025;
     printf("Starting learning rate : %f\n", starting_lr);
     
     // 1. Prepare for training
