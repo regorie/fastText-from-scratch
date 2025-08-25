@@ -1,19 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <time.h>
 #include <math.h>
+#include <time.h>
 #include <pthread.h>
-#include <limits.h>
-
 #include <locale.h>
-#include <wchar.h>
-
-#include <ctype.h>
 
 #include "fasttext.h"
-
-#define EXP_TABLE_SIZE 1000
-#define MAX_EXP 6
 
 // cars for IO
 char input_file[MAX_STRING];
@@ -24,11 +16,10 @@ int binary = 1;
 long long file_size = 0;
 
 // training params
-short int n_of_thread;
+int n_of_thread;
 int window_size = 5;
 int hidden_size;
 int min_count = 5;
-int n_of_words_limit;
 int epoch;
 float starting_lr;
 float lr;
@@ -42,15 +33,14 @@ long long *skip_cnt;
 long long total_skip_cnt = 0;
 
 // Structures, vars used for training
-long long int* subword_hash;
+int* subword_hash;
 int* word_hash;
-long long int size_of_subword_hash = MAX_VOCAB_SIZE*6;
+int size_of_subword_hash = 2000000; // 2M
 int size_of_word_hash = MAX_VOCAB_SIZE;
 struct WORD* vocab;
 int size_of_vocab = 2048;
 
 int n_of_words = 0;
-long long int n_of_subwords = 0;
 long long int total_words = 0;
 long long int trained_word = 0;
 float* expTable;
@@ -60,7 +50,6 @@ int ns_sample=5;
 int* unigram_table;
 int unigram_table_size=1e8;
 
-char* subword_list;
 float* subwords_vec;
 float* out_words_vec;
 
@@ -76,6 +65,9 @@ void* training_thread(void* id_ptr){
     float target_vector[hidden_size];
     long long context, context_pos;
     long long sentence_length;
+    int unkown_sub_ids[MAX_SENTENCE_LENGTH];
+    char* unkown_words[MAX_SENTENCE_LENGTH];
+    int flag = 0;
 
     long long random_window;
     unsigned long long next_random = (long long)id;
@@ -98,8 +90,8 @@ void* training_thread(void* id_ptr){
 
         if(id==0) printf("\nRunning epoch %d\n", ep);
         while(1){
-            sentence_length = readSentenceFromFile(infp, sentence, id, ep+1);
-
+            sentence_length = readSentenceFromFile(infp, sentence, id, ep+1, unkown_words);
+            //printf(" sentence read\n");
             if(sentence_length < 0 ) break;
             local_trained_word += skip_cnt[id];
             local_skipped_total += skip_cnt[id];
@@ -122,9 +114,25 @@ void* training_thread(void* id_ptr){
 
                 // 1. Set target
                 target = sentence[target_pos];
-                if(target==-1) continue;
-                getWordVector(target, target_vector);
-
+                int n_of_subwords_ = 1;
+                if(target==-1) {
+                    //printf(" target not in vocab %d\n", target);
+                    for(int n=minn; n<=maxn; n++){
+                        if(n>strlen(unkown_words[target_pos])+2) break;
+                        n_of_subwords_ += strlen(unkown_words[target_pos])+2-n+1;
+                    }
+                    //printf(" finding target vector\n");
+                    getWordVectorFromString(unkown_words[target_pos], target_vector, unkown_sub_ids, n_of_subwords_);
+                    free(unkown_words[target_pos]);
+                    flag=1;
+                    //printf(" target set\n");
+                }
+                else{
+                    //printf(" target in vocab %d\n", target);
+                    getWordVector(target, target_vector);
+                    flag=0;
+                }
+                //printf(" target set %d\n", target);
                 // 2. Forward pass
                 // reset gradient
                 for (int b=0; b<hidden_size; b++){
@@ -132,6 +140,7 @@ void* training_thread(void* id_ptr){
                 }
                 next_random = next_random * (unsigned long long)25214903917 + 11;
                 random_window = next_random % window_size;
+                //printf(" window size set\n");
                 for(context_pos = target_pos-random_window; context_pos<=target_pos+random_window; context_pos++){
                     if(context_pos<0) continue;
                     if(context_pos>=sentence_length) break;
@@ -141,7 +150,9 @@ void* training_thread(void* id_ptr){
                         int current_sample, label;
 
                         context = sentence[context_pos];
-                        if(context==-1) continue;
+                        if(context==-1) {
+                            continue;
+                        }
 
                         for(int d=0; d<ns_sample+1; d++){
                             // pick sample
@@ -178,9 +189,18 @@ void* training_thread(void* id_ptr){
                     }
                 }
                 // updating subwords vector
-                for (int sub=0; sub<vocab[target].n_of_subwords; sub++){
-                    for(int b=0; b<hidden_size; b++){
-                        subwords_vec[vocab[target].subword_ids[sub]*hidden_size + b] += layer_grad[b];
+                if(flag==0){
+                    for (int sub=0; sub<vocab[target].n_of_subwords; sub++){
+                        for(int b=0; b<hidden_size; b++){
+                            subwords_vec[vocab[target].subword_ids[sub]*hidden_size + b] += layer_grad[b];
+                        }
+                    }
+                }
+                else if(flag==1){
+                    for (int sub=0; sub<n_of_subwords_; sub++){
+                        for(int b=0; b<hidden_size; b++){
+                            subwords_vec[unkown_sub_ids[sub]*hidden_size + b] += layer_grad[b];
+                        }
                     }
                 }
                 local_trained_word++;
@@ -212,27 +232,30 @@ void* training_thread(void* id_ptr){
 int main(int argc, char** argv){
     setlocale(LC_ALL, ".UTF8");
 
-    if(argc<9){
-        printf("Usage example: ./fasttext hidden_size window_size n_of_words_limit thread_number epoch binary data_file output_file");
+    if(argc!=12){
+        printf("Usage example: ./fasttext hidden_size window_size minn maxn min_count ns_sample n_of_thread_number epoch binary data_file output_file\n");
         return -1;
     }
     else{
         hidden_size = atoi(argv[1]);
         window_size = atoi(argv[2]);
-        n_of_words_limit = atoi(argv[3]);
-        n_of_thread = atoi(argv[4]);
-        epoch = atoi(argv[5]);
-        binary = atoi(argv[6]);
-        strcpy(input_file, argv[7]);
-        strcpy(output_file, argv[8]);
+        minn = atoi(argv[3]);
+        maxn = atoi(argv[4]);
+        min_count = atoi(argv[5]);
+        ns_sample = atoi(argv[6]);
+        n_of_thread = atoi(argv[7]);
+        epoch = atoi(argv[8]);
+        binary = atoi(argv[9]);
+        strcpy(input_file, argv[10]);
+        strcpy(output_file, argv[11]);
     }
-    starting_lr = 0.025;
+    starting_lr = 0.05;
     printf("Starting learning rate : %f\n", starting_lr);
     
     // 1. Prepare for training
     word_hash = (int*)calloc(size_of_word_hash, sizeof(int));
     vocab = (struct WORD*)calloc(size_of_vocab, sizeof(struct WORD));
-    subword_hash = (long long int*)calloc(size_of_subword_hash, sizeof(long long int));
+    subword_hash = (int*)calloc(size_of_subword_hash, sizeof(int));
 
     printf("%s\n", input_file);
     readWordsFromFile(input_file);
@@ -248,9 +271,9 @@ int main(int argc, char** argv){
     }
 
     // Initialize model
-    subwords_vec = (float*)malloc(sizeof(float)*hidden_size*n_of_subwords);
+    subwords_vec = (float*)malloc(sizeof(float)*(hidden_size*size_of_subword_hash));
     long long random_number = time(NULL);
-    for(int a=0; a<n_of_subwords; a++){
+    for(int a=0; a<size_of_subword_hash; a++){
         for(int b=0; b<hidden_size; b++){
             random_number = random_number * (unsigned long long)25214903917 + 11;
             subwords_vec[a*hidden_size + b] = (((random_number & 0xFFFF) / (float)65536) - 0.5) / hidden_size;
@@ -284,12 +307,14 @@ int main(int argc, char** argv){
 
     // 3. Save subword vectors
     strcat(output_file_subword, output_file);
-    printf("output file %s\n", output_file_subword);
+    printf("output file: %s\n", output_file_subword);
     FILE* outfp = fopen(output_file_subword, "wb");
     if(outfp == NULL) printf("subword file open error\n");
-    fprintf(outfp, "%lld %lld\n", (long long)n_of_subwords, (long long)hidden_size);
-    for(int a=0; a<n_of_subwords; a++){
-        fprintf(outfp, "%s ", subword_list+(maxn*4+1)*a);
+
+    fprintf(outfp, "%d %d\n", size_of_subword_hash, hidden_size);
+
+    for(int a=0; a<size_of_subword_hash; a++){
+        //fprintf(outfp, "%s ", subword_list+(maxn*4+1)*a);
 
         if(binary) {
             for(int b=0; b<hidden_size; b++){
@@ -340,7 +365,6 @@ int main(int argc, char** argv){
     free(words_vec);
     free(subwords_vec);
     free(expTable);
-    free(subword_list);
     free(skip_cnt);
 
     for(int i=0; i<n_of_words; i++){
@@ -358,7 +382,7 @@ int main(int argc, char** argv){
 unsigned int getHash(char* word, long long int max_hash){
     unsigned int hash_key = 2166136261;
     for(int i=0; i<strlen(word); i++){
-        hash_key = hash_key^(unsigned int)((signed char)word[i]);
+        hash_key = hash_key^(unsigned int)((signed char)word[i]); // might need to change order
         hash_key = hash_key* 16777619;
     }
     hash_key = hash_key%max_hash;
@@ -438,20 +462,20 @@ void reduceWords(){
     total_words = 0;
     int hash_key;
     for(int i=0; i<n_of_words; i++){
-        if(vocab[i].count < min_count || i >= n_of_words_limit) {
+        if(vocab[i].count < min_count || i >= MAX_VOCAB_SIZE) {
             n_of_words = i;
             break;
         }
         vocab[i].code = (char*)calloc(MAX_CODE_LENGTH, sizeof(char));
         vocab[i].point = (int*)calloc(MAX_CODE_LENGTH, sizeof(int));
-        vocab[i].n_of_subwords = 0;
+        vocab[i].n_of_subwords = 1;
         for(int n=minn; n<=maxn; n++){
             if(n>strlen(vocab[i].word)+2) break;
             vocab[i].n_of_subwords += strlen(vocab[i].word)+2-n+1;
         }
 
-        vocab[i].subword_ids = (long long int*)malloc(sizeof(long long int) * vocab[i].n_of_subwords);
-        vocab[i].subwords = (char**)malloc(sizeof(char*)*4*vocab[i].n_of_subwords);
+        vocab[i].subword_ids = (int*)malloc(sizeof(int) * vocab[i].n_of_subwords);
+        vocab[i].subwords = (char**)malloc(sizeof(char*) * vocab[i].n_of_subwords);
         for(int subs=0; subs<vocab[i].n_of_subwords; subs++){
             vocab[i].subwords[subs] = (char*)calloc(maxn*4+1, sizeof(char));
         }
@@ -473,11 +497,8 @@ void buildSubwordHash(){
     printf("Building subword hash table... ");
     resetHashTable(1);
     
-    char** subwords = (char**)malloc(sizeof(char*)*4*size_of_subword_hash);
-    for(int subs=0; subs<size_of_subword_hash; subs++){
-        subwords[subs] = (char*)calloc(maxn*4+1, sizeof(char));
-    }
     unsigned int hash_key;
+    int current_id = 0;
     
     char* cur_word = (char*)malloc(sizeof(char) * MAX_STRING);
     cur_word[0] = BOW;
@@ -485,21 +506,15 @@ void buildSubwordHash(){
         memcpy(cur_word+1, vocab[i].word, strlen(vocab[i].word));
         cur_word[strlen(vocab[i].word)+1] = EOW;
         cur_word[strlen(vocab[i].word)+2] = '\0';
-        
-        calculateSubwords(cur_word, vocab[i].subwords, vocab[i].n_of_subwords);
+
+        calculateSubwords(cur_word, vocab[i].subwords);
+
         for(int j=0; j< vocab[i].n_of_subwords; j++){
             hash_key = getHash(vocab[i].subwords[j], size_of_subword_hash);
             
-            while(1){
-                if(subword_hash[hash_key]==-1){
-                    subword_hash[hash_key] = n_of_subwords;
-                    strcpy(subwords[n_of_subwords], vocab[i].subwords[j]);
-                    n_of_subwords++;
-                }
-                if(strcmp(subwords[subword_hash[hash_key]], vocab[i].subwords[j])==0){
-                    break;
-                }
-                hash_key = (hash_key+1)%size_of_subword_hash;
+            if(subword_hash[hash_key]==-1){
+                subword_hash[hash_key] = current_id;
+                current_id++;
             }
             vocab[i].subword_ids[j] = subword_hash[hash_key]; // store as id
             free(vocab[i].subwords[j]);
@@ -507,15 +522,6 @@ void buildSubwordHash(){
         free(vocab[i].subwords);
     }
 
-    subword_list = (char*)calloc(n_of_subwords*(maxn*4+1), sizeof(char));
-    for(int subs=0; subs<n_of_subwords; subs++){
-        strcpy(subword_list+subs*(maxn*4+1), subwords[subs]);
-    }
-
-    for(int subs=0; subs<size_of_subword_hash; subs++){
-       free(subwords[subs]);
-    }
-    free(subwords);
     free(cur_word);
     printf("Done\n");
 }
@@ -525,7 +531,7 @@ int utf8_charlen(unsigned char c){
     else if ((c & 0xE0) == 0xC0) return 2;  // 110xxxxx
     else if ((c & 0xF0) == 0xE0) return 3;  // 1110xxxx
     else if ((c & 0xF8) == 0xF0) return 4;  // 11110xxx
-    return -1; // invalid fallback
+    return 1; // invalid fallback
 }
 
 int utf8_strlen(const char *s) {
@@ -541,7 +547,7 @@ int utf8_strlen(const char *s) {
     return len;
 }
 
-void calculateSubwords(char* word, char** subwords, int n_of_subwords){
+void calculateSubwords(char* word, char** subwords){
     // find all subwords and add to "subwords"
     int idx = 0;
     int pos;
@@ -551,6 +557,9 @@ void calculateSubwords(char* word, char** subwords, int n_of_subwords){
     int char_len;
     int initial_char_len;
     int word_bytes = 0;
+
+    strncpy(subwords[idx], word, len);
+    idx++;
 
     for (n = minn; n <= maxn; n++) {
         pos = 0;
@@ -590,7 +599,8 @@ void resetHashTable(int mode){
     }
 }
 
-int readSentenceFromFile(FILE* fp, long long* sentence, long long thread_id, int iter){
+// returns list of word ids
+int readSentenceFromFile(FILE* fp, long long* sentence, long long thread_id, int iter, char** unkown_words){
     char ch;
     char cur_word[MAX_STRING] = {0};
     int word_length = 0;
@@ -610,18 +620,24 @@ int readSentenceFromFile(FILE* fp, long long* sentence, long long thread_id, int
 
             id_found = searchVocabID(cur_word);
 
-            if(id_found != -1){
-                if (sample > 0){
-                    float ran = (sqrt(vocab[id_found].count / (sample * total_words)) + 1) * (sample * total_words) / vocab[id_found].count;
-                    next_random = next_random * (unsigned long long)25214903917 + 11;
-                    if(ran < (next_random & 0xFFFF) / (float)65536) {
-                        skip_cnt[thread_id]++;
-                        total_skip_cnt++;
-                        continue;
-                    }
+            if (sample > 0){
+                float ran;
+                if (id_found==-1){ ran = (sqrt(1 / (sample * total_words)) + 1) * (sample * total_words) / 1; }
+                else{ ran = (sqrt(vocab[id_found].count / (sample * total_words)) + 1) * (sample * total_words) / vocab[id_found].count; }
+
+                next_random = next_random * (unsigned long long)25214903917 + 11;
+                if(ran < (next_random & 0xFFFF) / (float)65536) {
+                    skip_cnt[thread_id]++;
+                    total_skip_cnt++;
+                    continue;
                 }
-                sentence[sentence_length++] = id_found;
             }
+            if (id_found==-1){
+                unkown_words[sentence_length] = (char*)calloc(MAX_STRING, sizeof(char));
+                strcpy(unkown_words[sentence_length], cur_word);
+            }
+            sentence[sentence_length++] = id_found;
+
             if(ch=='\n') { return sentence_length;}
             if(sentence_length >= MAX_SENTENCE_LENGTH){
                 return sentence_length;
@@ -640,18 +656,24 @@ int readSentenceFromFile(FILE* fp, long long* sentence, long long thread_id, int
         word_length = 0;
 
         id_found = searchVocabID(cur_word);
-        if(id_found != -1){
-            if (sample > 0){
-                float ran = (sqrt(vocab[id_found].count / (sample * total_words)) + 1) * (sample * total_words) / vocab[id_found].count;
-                next_random = next_random * (unsigned long long)25214903917 + 11;
-                if(ran < (next_random & 0xFFFF) / (float)65536) {
-                    skip_cnt[thread_id]++;
-                    total_skip_cnt++;
-                    return sentence_length;
-                }
+        if (sample > 0){
+            float ran;
+            if (id_found==-1){ ran = (sqrt(1 / (sample * total_words)) + 1) * (sample * total_words) / 1; }
+            else{ ran = (sqrt(vocab[id_found].count / (sample * total_words)) + 1) * (sample * total_words) / vocab[id_found].count; }
+
+            next_random = next_random * (unsigned long long)25214903917 + 11;
+            if(ran < (next_random & 0xFFFF) / (float)65536) {
+                skip_cnt[thread_id]++;
+                total_skip_cnt++;
+                return sentence_length;
             }
-            sentence[sentence_length++] = id_found;
         }
+
+        if (id_found==-1){
+            unkown_words[sentence_length] = (char*)calloc(MAX_STRING, sizeof(char));
+            strcpy(unkown_words[sentence_length], cur_word);
+        }
+        sentence[sentence_length++] = id_found;
     }
     if(sentence_length==0) return -1;
     return sentence_length;
@@ -673,35 +695,52 @@ char* IDtoWord(int id){
     return vocab[id].word;
 }
 
-// this function does not check whether the word is in the hash or not
-void getWordVectorFromString(char* word, float* word_vec){
-    unsigned int hash_key = getHash(word, size_of_word_hash);
-    while(strcmp(vocab[word_hash[hash_key]].word, word)!=0){
-        hash_key = (hash_key+1)%size_of_word_hash;
-    }
+// this function is used to calculate vectors that is not in vocab
+void getWordVectorFromString(char* word, float* word_vec, int* subwords_id, int n_of_subwords){
 
-    int id = word_hash[hash_key];
+    char** subwords = (char**)malloc(sizeof(char*)*n_of_subwords);
+    for(int subs=0; subs<n_of_subwords; subs++){
+            subwords[subs] = (char*)calloc(maxn*4+1, sizeof(char));
+    }
+    calculateSubwords(word, subwords);
+
+    unsigned int hash_key;
+    for(int i=0; i<n_of_subwords; i++){
+        subwords_id[i] = getHash(subwords[i], size_of_subword_hash);
+    }
 
     for(int h=0; h<hidden_size; h++){
         word_vec[h] = 0.0;
     }
-    for (int i=0; i<vocab[id].n_of_subwords; i++){
+    for (int i=0; i<n_of_subwords; i++){
         for (int h=0; h<hidden_size; h++){
-            word_vec[h] += subwords_vec[hidden_size*vocab[id].subword_ids[i] + h];
+            word_vec[h] += subwords_vec[hidden_size*subwords_id[i] + h];
         }
+    }
+    for(int i=0; i<hidden_size; i++){
+        word_vec[i] *= (1/(float)n_of_subwords);
     }
 }
 
 void getWordVector(int id, float* word_vec){
 
+    if(id >= n_of_words){
+        printf("ID out of bound\n");
+        exit(1);
+    }
+
     for(int h=0; h<hidden_size; h++){
         word_vec[h] = 0.0;
     }
+
     for (int i=0; i<vocab[id].n_of_subwords; i++){
         for (int h=0; h<hidden_size; h++){
             word_vec[h] += subwords_vec[hidden_size*vocab[id].subword_ids[i] + h];
         }
-    }  
+    }
+    for( int i=0; i<hidden_size; i++){
+        word_vec[i] *= (1/(float)vocab[id].n_of_subwords);
+    }
 }
 
 void initUnigramTable(){

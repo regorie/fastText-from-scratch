@@ -3,10 +3,13 @@
 #include <string.h>
 #include <stdio.h>
 
-#define MAX_VOCAB_SIZE 3000000 // maximum vocabulary size 3M
+#define MAX_VOCAB_SIZE 30000000 // maximum vocabulary size 30M
 #define MAX_STRING 100
 #define MAX_SENTENCE_LENGTH 1000
 #define MAX_CODE_LENGTH 40
+
+#define EXP_TABLE_SIZE 1000
+#define MAX_EXP 6
 
 struct WORD { // idx is id(hash table)
     int count;
@@ -16,7 +19,7 @@ struct WORD { // idx is id(hash table)
     int* point;
 
     char** subwords;
-    unsigned long long int* subword_ids;
+    int* subword_ids;
     int n_of_subwords;
 };
 
@@ -25,9 +28,9 @@ void readWordsFromFile(char* file_name);
 void reduceWords();
 void buildSubwordHash();
 
-void calculateSubwords(char* word, char** subwords, int n_of_subwords);
+void calculateSubwords(char* word, char** subwords);
 
-void getWordVectorFromString(char* word, float* word_vec);
+void getWordVectorFromString(char* word, float* word_vec, int* subwords_id, int n_of_subwords);
 void getWordVector(int id, float* word_vec);
 int searchVocabID(char* word);
 char* IDtoWord(int id);
@@ -35,5 +38,5 @@ char* IDtoWord(int id);
 void resetHashTable(int mode);
 void initUnigramTable();
 
-int readSentenceFromFile(FILE* fp, long long* sentence, long long id, int iter);
+int readSentenceFromFile(FILE* fp, long long* sentence, long long id, int iter, char** unkown_words);
 
