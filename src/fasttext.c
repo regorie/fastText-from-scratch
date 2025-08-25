@@ -257,7 +257,6 @@ int main(int argc, char** argv){
     vocab = (struct WORD*)calloc(size_of_vocab, sizeof(struct WORD));
     subword_hash = (int*)calloc(size_of_subword_hash, sizeof(int));
 
-    printf("%s\n", input_file);
     readWordsFromFile(input_file);
     reduceWords();
 
@@ -477,7 +476,7 @@ void reduceWords(){
         vocab[i].subword_ids = (int*)malloc(sizeof(int) * vocab[i].n_of_subwords);
         vocab[i].subwords = (char**)malloc(sizeof(char*) * vocab[i].n_of_subwords);
         for(int subs=0; subs<vocab[i].n_of_subwords; subs++){
-            vocab[i].subwords[subs] = (char*)calloc(maxn*4+1, sizeof(char));
+            vocab[i].subwords[subs] = (char*)calloc((strlen(vocab[i].word+2))*4+1, sizeof(char));
         }
 
         hash_key = getHash(vocab[i].word, size_of_word_hash);
