@@ -52,8 +52,6 @@ int unigram_table_size=1e8;
 
 float* subwords_vec;
 float* out_words_vec;
-
-// final word representation
 float* words_vec;
 
 void* training_thread(void* id_ptr){
@@ -130,6 +128,9 @@ void* training_thread(void* id_ptr){
                 else{
                     //printf(" target in vocab %d\n", target);
                     getWordVector(target, target_vector);
+                    for(int b=0; b<hidden_size; b++){
+                        target_vector[b] += words_vec[target*hidden_size + b];
+                    }
                     flag=0;
                 }
                 //printf(" target set %d\n", target);
@@ -188,15 +189,21 @@ void* training_thread(void* id_ptr){
                         }
                     }
                 }
-                // updating subwords vector
-                if(flag==0){
+                // updating subwords/words vector
+                if(flag==0){ // target word in vocab
+                    for (int b=0; b<hidden_size; b++){
+                        words_vec[target*hidden_size + b] += layer_grad[b];
+                    }
+                    for(int b=0; b<hidden_size; b++){ // hmm... is this unnecessary
+                        layer_grad[b] *= (1/vocab[target].n_of_subwords);
+                    }
                     for (int sub=0; sub<vocab[target].n_of_subwords; sub++){
                         for(int b=0; b<hidden_size; b++){
                             subwords_vec[vocab[target].subword_ids[sub]*hidden_size + b] += layer_grad[b];
                         }
                     }
                 }
-                else if(flag==1){
+                else if(flag==1){ // target word not in vocab
                     for (int sub=0; sub<n_of_subwords_; sub++){
                         for(int b=0; b<hidden_size; b++){
                             subwords_vec[unkown_sub_ids[sub]*hidden_size + b] += layer_grad[b];
@@ -285,6 +292,13 @@ int main(int argc, char** argv){
             out_words_vec[a*hidden_size + b] = (((random_number & 0xFFFF) / (float)65536) - 0.5) / hidden_size;
         }
     }
+    words_vec = (float*)malloc(sizeof(float)*hidden_size*n_of_words);
+    for(int a=0; a<n_of_words; a++){
+        for(int b=0; b<hidden_size; b++){
+            random_number = random_number * (unsigned long long)25214903917 + 11;
+            words_vec[a*hidden_size + b] = (((random_number & 0xFFFF) / (float)65536) - 0.5) / hidden_size;
+        }
+    }
 
     // 2. Train
     printf("Training... ");
@@ -335,21 +349,19 @@ int main(int argc, char** argv){
     outfp = fopen(output_file_word, "wb");
     if(outfp == NULL) printf("word file open error\n");
 
-    float target_vector[hidden_size];
     fprintf(outfp, "%lld %lld\n", (long long)n_of_words, (long long)hidden_size);
     for(int a=0; a<n_of_words; a++){
-        getWordVector(a, target_vector);
 
         fprintf(outfp, "%s ", vocab[a].word);
 
         if(binary) {
             for(int b=0; b<hidden_size; b++){
-                fwrite(&target_vector[b], sizeof(float), 1, outfp);
+                fwrite(&words_vec[a*hidden_size + b], sizeof(float), 1, outfp);
             }
         }
         else{
             for(int b=0; b<hidden_size; b++){
-                fprintf(outfp, "%lf ", target_vector[b]);
+                fprintf(outfp, "%lf ", words_vec[a*hidden_size + b]);
             }
         }
         fprintf(outfp, "\n");
