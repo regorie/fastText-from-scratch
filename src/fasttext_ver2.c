@@ -1,3 +1,9 @@
+/*
+Version 2 code:
+Uses subword table with no full-word subword
+word vector is used instead ( word vectors are treated like subword )
+*/
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
