@@ -717,7 +717,7 @@ void getWordVectorFromString(char* word, float* word_vec, int* subwords_id, int 
 
     char** subwords = (char**)malloc(sizeof(char*)*n_of_subwords);
     for(int subs=0; subs<n_of_subwords; subs++){
-            subwords[subs] = (char*)calloc(maxn*4+1, sizeof(char));
+            subwords[subs] = (char*)calloc(strlen(word)*4+1, sizeof(char));
     }
     calculateSubwords(word, subwords);
 
