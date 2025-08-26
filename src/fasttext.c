@@ -633,7 +633,10 @@ int readSentenceFromFile(FILE* fp, long long* sentence, long long thread_id, int
             }
             if (id_found==-1){
                 unkown_words[sentence_length] = (char*)calloc(MAX_STRING, sizeof(char));
-                strcpy(unkown_words[sentence_length], cur_word);
+                unkown_words[sentence_length][0] = BOW;
+                strcpy((unkown_words[sentence_length])+1, cur_word);
+                unkown_words[sentence_length][strlen(cur_word)+1] = EOW;
+                unkown_words[sentence_length][strlen(cur_word)+2] = '\0';
             }
             sentence[sentence_length++] = id_found;
 
@@ -644,7 +647,7 @@ int readSentenceFromFile(FILE* fp, long long* sentence, long long thread_id, int
         }
         else if(ch=='\r') continue;
         else{
-            if(word_length >= MAX_STRING - 1) word_length--;
+            if(word_length >= MAX_STRING - 3) word_length--;
             cur_word[word_length++] = ch;
         }
     }
@@ -670,7 +673,10 @@ int readSentenceFromFile(FILE* fp, long long* sentence, long long thread_id, int
 
         if (id_found==-1){
             unkown_words[sentence_length] = (char*)calloc(MAX_STRING, sizeof(char));
-            strcpy(unkown_words[sentence_length], cur_word);
+            unkown_words[sentence_length][0] = BOW;
+            strcpy((unkown_words[sentence_length])+1, cur_word);
+            unkown_words[sentence_length][strlen(cur_word)+1] = EOW;
+            unkown_words[sentence_length][strlen(cur_word)+2] = '\0';
         }
         sentence[sentence_length++] = id_found;
     }
