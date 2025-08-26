@@ -1,11 +1,4 @@
-/*
-Version 2 code:
-Uses subword table with no full-word subword
-word vector is used instead ( word vectors are treated like subword )
-word vectors are saved as mean of subwords and itself
-TODO: check for memory leaks
-better then ver2, but still bad
-*/
+// Please...
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -121,7 +114,7 @@ void* training_thread(void* id_ptr){
 
                 // 1. Set target
                 target = sentence[target_pos];
-                int n_of_subwords_ = 0;
+                int n_of_subwords_ = 1;
                 if(target==-1) {
                     //printf(" target not in vocab %d\n", target);
                     for(int n=minn; n<=maxn; n++){
@@ -137,9 +130,6 @@ void* training_thread(void* id_ptr){
                 else{
                     //printf(" target in vocab %d\n", target);
                     getWordVector(target, target_vector);
-                    for(int b=0; b<hidden_size; b++){
-                        target_vector[b] += words_vec[target*hidden_size + b]*(1/(float)(vocab[target].n_of_subwords+1));
-                    }
                     flag=0;
                 }
                 //printf(" target set %d\n", target);
@@ -200,9 +190,7 @@ void* training_thread(void* id_ptr){
                 }
                 // updating subwords/words vector
                 if(flag==0){ // target word in vocab
-                    //for (int b=0; b<hidden_size; b++){
-                    //    words_vec[target*hidden_size + b] += layer_grad[b];
-                    //}
+
                     for(int b=0; b<hidden_size; b++){ // hmm... is this unnecessary
                         layer_grad[b] *= (1/(float)(vocab[target].n_of_subwords+1));
                     }
@@ -211,7 +199,7 @@ void* training_thread(void* id_ptr){
                             subwords_vec[vocab[target].subword_ids[sub]*hidden_size + b] += layer_grad[b];
                         }
                     }
-                    for (int b=0; b<hidden_size; b++){
+                    for(int b=0; b<hidden_size; b++){
                         words_vec[target*hidden_size + b] += layer_grad[b];
                     }
                 }
@@ -364,13 +352,11 @@ int main(int argc, char** argv){
     outfp = fopen(output_file_word, "wb");
     if(outfp == NULL) printf("word file open error\n");
 
-    float target_vector[hidden_size];
     fprintf(outfp, "%lld %lld\n", (long long)n_of_words, (long long)hidden_size);
+
+    float target_vector[hidden_size];
     for(int a=0; a<n_of_words; a++){
         getWordVector(a, target_vector);
-        for (int b=0; b<hidden_size; b++){
-            target_vector[b] += words_vec[a*hidden_size+b]*(1/((float)vocab[a].n_of_subwords+1));
-        }
 
         fprintf(outfp, "%s ", vocab[a].word);
 
@@ -499,7 +485,7 @@ void reduceWords(){
         }
         vocab[i].code = (char*)calloc(MAX_CODE_LENGTH, sizeof(char));
         vocab[i].point = (int*)calloc(MAX_CODE_LENGTH, sizeof(int));
-        vocab[i].n_of_subwords = 0;
+        vocab[i].n_of_subwords = 1;
         for(int n=minn; n<=maxn; n++){
             if(n>strlen(vocab[i].word)+2) break;
             vocab[i].n_of_subwords += strlen(vocab[i].word)+2-n+1;
@@ -508,7 +494,7 @@ void reduceWords(){
         vocab[i].subword_ids = (int*)malloc(sizeof(int) * vocab[i].n_of_subwords);
         vocab[i].subwords = (char**)malloc(sizeof(char*) * vocab[i].n_of_subwords);
         for(int subs=0; subs<vocab[i].n_of_subwords; subs++){
-            vocab[i].subwords[subs] = (char*)calloc(maxn*4+1, sizeof(char));
+            vocab[i].subwords[subs] = (char*)calloc((strlen(vocab[i].word+2))*4+1, sizeof(char));
         }
 
         hash_key = getHash(vocab[i].word, size_of_word_hash);
@@ -534,7 +520,6 @@ void buildSubwordHash(){
     char* cur_word = (char*)malloc(sizeof(char) * MAX_STRING);
     cur_word[0] = BOW;
     for(int i=0; i<n_of_words; i++){
-
         memcpy(cur_word+1, vocab[i].word, strlen(vocab[i].word));
         cur_word[strlen(vocab[i].word)+1] = EOW;
         cur_word[strlen(vocab[i].word)+2] = '\0';
@@ -590,8 +575,8 @@ void calculateSubwords(char* word, char** subwords){
     int initial_char_len;
     int word_bytes = 0;
 
-    //strncpy(subwords[idx], word, len);
-    //idx++;
+    strncpy(subwords[idx], word, len);
+    idx++;
 
     for (n = minn; n <= maxn; n++) {
         pos = 0;
@@ -666,10 +651,7 @@ int readSentenceFromFile(FILE* fp, long long* sentence, long long thread_id, int
             }
             if (id_found==-1){
                 unkown_words[sentence_length] = (char*)calloc(MAX_STRING, sizeof(char));
-                unkown_words[sentence_length][0] = BOW;
-                strcpy((unkown_words[sentence_length])+1, cur_word);
-                unkown_words[sentence_length][strlen(cur_word)+1] = EOW;
-                unkown_words[sentence_length][strlen(cur_word)+2] = '\0';
+                strcpy((unkown_words[sentence_length]), cur_word);
             }
             sentence[sentence_length++] = id_found;
 
@@ -706,10 +688,7 @@ int readSentenceFromFile(FILE* fp, long long* sentence, long long thread_id, int
 
         if (id_found==-1){
             unkown_words[sentence_length] = (char*)calloc(MAX_STRING, sizeof(char));
-            unkown_words[sentence_length][0] = BOW;
-            strcpy((unkown_words[sentence_length])+1, cur_word);
-            unkown_words[sentence_length][strlen(cur_word)+1] = EOW;
-            unkown_words[sentence_length][strlen(cur_word)+2] = '\0';
+            strcpy((unkown_words[sentence_length]), cur_word);
         }
         sentence[sentence_length++] = id_found;
     }
@@ -737,10 +716,16 @@ char* IDtoWord(int id){
 void getWordVectorFromString(char* word, float* word_vec, int* subwords_id, int n_of_subwords){
 
     char** subwords = (char**)malloc(sizeof(char*)*n_of_subwords);
+    char* tmp = (char*)calloc(strlen(word)+2,sizeof(char));
+    tmp[0] = BOW;
+    strncpy(tmp[1], word, strlen(word));
+    tmp[strlen(word)+1] = EOW;
+
     for(int subs=0; subs<n_of_subwords; subs++){
-            subwords[subs] = (char*)calloc(maxn*4+1, sizeof(char));
+        subwords[subs] = (char*)calloc((strlen(word)+2)*4+1, sizeof(char));
     }
-    calculateSubwords(word, subwords);
+
+    calculateSubwords(tmp, subwords);
 
     unsigned int hash_key;
     for(int i=0; i<n_of_subwords; i++){
@@ -758,9 +743,14 @@ void getWordVectorFromString(char* word, float* word_vec, int* subwords_id, int 
     for(int i=0; i<hidden_size; i++){
         word_vec[i] *= (1/(float)n_of_subwords);
     }
+
+    for(int subs=0; subs<n_of_subwords; subs++){
+        free(subwords[subs]);
+    }
+    free(subwords);
+    free(tmp);
 }
 
-// get the average of subwords
 void getWordVector(int id, float* word_vec){
 
     if(id >= n_of_words){
@@ -776,6 +766,9 @@ void getWordVector(int id, float* word_vec){
         for (int h=0; h<hidden_size; h++){
             word_vec[h] += subwords_vec[hidden_size*vocab[id].subword_ids[i] + h];
         }
+    }
+    for(int h=0; h<hidden_size; h++){
+        word_vec[h] += words_vec[id*hidden_size + h];
     }
     for( int i=0; i<hidden_size; i++){
         word_vec[i] *= (1/(float)(vocab[id].n_of_subwords+1));

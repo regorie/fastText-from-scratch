@@ -2,6 +2,7 @@
 Version 2 code:
 Uses subword table with no full-word subword
 word vector is used instead ( word vectors are treated like subword )
+Does not perform good
 */
 
 #include <stdlib.h>
