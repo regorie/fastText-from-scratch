@@ -321,8 +321,55 @@ int main(int argc, char** argv){
     printf("\n Training done... took %ld, last learning rate: %f trained_words: %lld\n", end_time-start_time, lr, trained_word_count);
 
 
-    // 3. Save word vectors
+    // 3. Save vectors
+    strcat(output_file_subword, output_file);
+    printf("output file: %s\n", output_file_subword);
+    FILE* outfp = fopen(output_file_subword, "wb");
+    if(outfp == NULL) {printf("subword file open error\n");}
+    else{
+        fprintf(outfp, "%d %d\n", size_of_subword_hash, hidden_size);
+        for(int i=0; i<size_of_subword_hash; i++){
+            if(binary){
+                for(int h=0; h<hidden_size; h++){
+                    fwrite(&subword_vec[i*hidden_size+h], sizeof(float), 1, outfp);
+                }
+            }
+            else{
+                for(int h=0; h<hidden_size; h++){
+                    fprintf(outfp, "%lf ", subword_vec[i*hidden_size+h]);
+                }
+            }
+            fprintf(outfp, "\n");
+        }
+        fclose(outfp);
+    }
 
+    strcat(output_file_word, output_file);
+    printf("output file: %s\n", output_file_word);
+    outfp = fopen(output_file_word, "wb");
+    if(outfp == NULL) printf("word file open error\n");
+    else{
+        fprintf(outfp, "%d %d\n", n_of_vocab, hidden_size);
+
+        float target_vector[hidden_size];
+        for(int i=0; i<n_of_vocab; i++){
+            getWordVector(i, target_vector);
+
+            fprintf(outfp, "%s ", vocab[i].word);
+            if(binary) {
+                for(int h=0; h<hidden_size; h++){
+                    fwrite(&target_vector[h], sizeof(float), 1, outfp);
+                }
+            }
+            else{
+                for(int h=0; h<hidden_size; h++){
+                    fprintf(outfp, "%lf ", target_vector[h]);
+                }
+            }
+            fprintf(outfp, "\n");
+        }
+        fclose(outfp);
+    }
 
     // 4. Free everything
     free(skip_cnt);
