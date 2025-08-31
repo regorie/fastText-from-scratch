@@ -701,7 +701,7 @@ void getWordVectorFromString(char* word, float* target_vec, int* subwords_id, in
     char** subwords = (char**)malloc(sizeof(char*)*n_of_subwords);
     char* tmp = (char*)calloc(strlen(word)+3, sizeof(char));
     tmp[0] = BOW;
-    strncpy(tmp[1], word, strlen(word));
+    strncpy(tmp+1, word, strlen(word));
     tmp[strlen(word)+1] = EOW;
 
     for(int i=0; i<n_of_subwords; i++){
