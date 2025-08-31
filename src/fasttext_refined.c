@@ -497,7 +497,7 @@ void reduceWords(){
             hash_key = (hash_key+1)%size_of_word_hash;
         }
         word_hash[hash_key] = i;
-        //total_word_count += vocab[i].count; // get rid of this, fastText will train on all words
+        total_word_count += vocab[i].count; // get rid of this, fastText will train on all words
     }
     printf("Done\n");
     printf("number of vocab: %d\n", n_of_vocab);
@@ -515,8 +515,9 @@ void calculateSubwordIDs(){
     for(int i=0; i<n_of_vocab; i++){
         memcpy(cur_word+1, vocab[i].word, strlen(vocab[i].word));
         cur_word[strlen(vocab[i].word)+1] = EOW;
+        cur_word[strlen(vocab[i].word)+2] = '\0';
 
-        calculateSubwords(cur_word, vocab[i].subwords);
+        calculateSubwords(cur_word, i);
 
         for(int j=0; j<vocab[i].n_of_subwords; j++){
             hash_key = getHash(vocab[i].subwords[j], size_of_subword_hash);
@@ -552,7 +553,7 @@ int utf8_strlen(const char *s){
 }
 
 // Finds all subwords and add to passed "subwords"
-void calculateSubwords(char* word, char** subwords){
+void calculateSubwords(char* word, int vocab_id){
     int idx = 0;
     int pos;
     int len = utf8_strlen(word);
@@ -562,8 +563,10 @@ void calculateSubwords(char* word, char** subwords){
     int initial_char_len;
     int word_bytes;
 
-    strncpy(subwords[idx], word, len);
-    idx++;
+    if(len > maxn){
+        strncpy(vocab[vocab_id].subwords[idx], word, len); // seg fault happens here
+        idx++;
+    }
 
     for(int n=minn; n<=maxn; n++){
         pos = 0;
@@ -576,8 +579,8 @@ void calculateSubwords(char* word, char** subwords){
                 word_bytes += char_len;
                 p += char_len;
             }
-            strncpy(subwords[idx], word+pos, word_bytes);
-            subwords[idx][word_bytes] = '\0';
+            strncpy(vocab[vocab_id].subwords[idx], word+pos, word_bytes);
+            vocab[vocab_id].subwords[idx][word_bytes] = '\0';
             idx++;
 
             pos += initial_char_len; // move to next character
