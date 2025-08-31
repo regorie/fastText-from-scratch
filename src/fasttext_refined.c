@@ -552,7 +552,7 @@ int utf8_strlen(const char *s){
     return len;
 }
 
-// Finds all subwords and add to passed "subwords"
+// Finds all subwords
 void calculateSubwords(char* word, int vocab_id){
     int idx = 0;
     int pos;
@@ -581,6 +581,42 @@ void calculateSubwords(char* word, int vocab_id){
             }
             strncpy(vocab[vocab_id].subwords[idx], word+pos, word_bytes);
             vocab[vocab_id].subwords[idx][word_bytes] = '\0';
+            idx++;
+
+            pos += initial_char_len; // move to next character
+        }
+    }
+}
+
+// Finds all subwords and add to passed "subwords"
+void calculateSubwordsToBuff(char* word, char** subwords){
+    int idx = 0;
+    int pos;
+    int len = utf8_strlen(word);
+    char current_subword[MAX_STRING];
+
+    int char_len;
+    int initial_char_len;
+    int word_bytes;
+
+    if(len > maxn){
+        strncpy(subwords[idx], word, len); // seg fault happens here
+        idx++;
+    }
+
+    for(int n=minn; n<=maxn; n++){
+        pos = 0;
+        for(int cnt=0; cnt<=len-n; cnt++){
+            int p=pos; // p is the currently estimated 'character' position
+            word_bytes=0;
+            initial_char_len=utf8_charlen((unsigned char)word[pos]);
+            for(int c=0; c<n; c++){
+                char_len = utf8_charlen((unsigned char)word[p]);
+                word_bytes += char_len;
+                p += char_len;
+            }
+            strncpy(subwords[idx], word+pos, word_bytes);
+            subwords[idx][word_bytes] = '\0';
             idx++;
 
             pos += initial_char_len; // move to next character
@@ -711,7 +747,7 @@ void getWordVectorFromString(char* word, float* target_vec, int* subwords_id, in
         subwords[i] = (char*)calloc((strlen(word)+2)*4+1, sizeof(char));
     }
 
-    calculateSubwords(tmp, subwords);
+    calculateSubwordsToBuff(tmp, subwords);
 
     unsigned int hash_key;
     for(int i=0; i<n_of_subwords; i++){

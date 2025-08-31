@@ -30,6 +30,7 @@ void reduceWords();
 void calculateSubwordIDs();
 
 void calculateSubwords(char* word, int vocab_id);
+void calculateSubwordsToBuff(char* word, char** subwords);
 
 void getWordVectorFromString(char* word, float* word_vec, int* subwords_id, int n_of_subwords);
 void getWordVector(int id, float* word_vec);
