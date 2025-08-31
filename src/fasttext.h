@@ -39,5 +39,5 @@ char* IDtoWord(int id);
 void resetHashTable();
 void initUnigramTable();
 
-int readSentenceFromFile(FILE* fp, long long* sentence, long long id, int iter, char** unkown_words);
+int readSentenceFromFile(FILE* fp, int* sentence, long long id, int iter, char** unkown_words);
 

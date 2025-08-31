@@ -270,7 +270,7 @@ int main(int argc, char** argv){
     readWordsFromFile(input_file);
     reduceWords();
     initUnigramTable();
-    buildSubwordHash();
+    calculateSubwordIDs();
 
     expTable = (float*)malloc((EXP_TABLE_SIZE+1)*sizeof(float));
     for(int i=0; i<EXP_TABLE_SIZE; i++){
@@ -394,7 +394,7 @@ int main(int argc, char** argv){
 unsigned int getHash(char* word, int max_hash){
     max_hash = (unsigned int)max_hash;
 
-    unsigned int hash_key = 2166136261;
+    unsigned int hash_key = 2166136261; // basis
     for (int i=0; i<strlen(word); i++){
         hash_key = hash_key ^ (unsigned int)((signed char)word[i]);
         hash_key *= 16777619;
@@ -595,7 +595,7 @@ void resetHashTable(){
 
 
 // builds list of word ids, returns the length of it
-int readSentenceFromFile(FILE* fp, long long* sentence, long long thread_id, int iter, char** unknown_words){
+int readSentenceFromFile(FILE* fp, int* sentence, long long thread_id, int iter, char** unknown_words){
     char ch;
     char cur_word[MAX_STRING] = {0};
     int word_length=0;
