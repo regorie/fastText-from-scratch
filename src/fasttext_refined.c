@@ -472,7 +472,7 @@ void reduceWords(){
 
     // 2. Allocate spaces for words, discard those that appear too less
     resetHashTable(0);
-    total_word_count = 0;
+    //total_word_count = 0;
     unsigned int hash_key;
     for(int i=0; i<n_of_vocab; i++){
         if(vocab[i].count < min_count || i>= MAX_VOCAB_SIZE){
@@ -497,7 +497,7 @@ void reduceWords(){
             hash_key = (hash_key+1)%size_of_word_hash;
         }
         word_hash[hash_key] = i;
-        total_word_count += vocab[i].count; // get rid of this, fastText will train on all words
+        //total_word_count += vocab[i].count; // get rid of this, fastText will train on all words
     }
     printf("Done\n");
     printf("number of vocab: %d\n", n_of_vocab);
