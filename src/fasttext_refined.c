@@ -127,8 +127,8 @@ void* training_thread(void* id_ptr){
                 if(target==-1){ // unknown word in sentence
                     n_of_unknown_sub=1;
                     for (int n=minn; n<=maxn; n++){
-                        if(n>strlen(unknown_words[target_pos])+2) break;
-                        n_of_unknown_sub += strlen(unknown_words[target_pos])-n+3;
+                        if(n>utf8_strlen(unknown_words[target_pos])+2) break;
+                        n_of_unknown_sub += utf8_strlen(unknown_words[target_pos])-n+3;
                     }
                     unknown_sub_ids = (int*)malloc(sizeof(int)*n_of_unknown_sub);
                     getWordVectorFromString(unknown_words[target_pos], target_vector, unknown_sub_ids, n_of_unknown_sub);
@@ -482,14 +482,17 @@ void reduceWords(){
         vocab[i].code = (char*)calloc(MAX_CODE_LENGTH, sizeof(char));
         vocab[i].point = (int*)calloc(MAX_CODE_LENGTH, sizeof(int));
 
-        vocab[i].n_of_subwords = 1;
+        if(utf8_strlen(vocab[i].word)+2 > maxn) vocab[i].n_of_subwords = 1;
+        else vocab[i].n_of_subwords = 0;
         for(int n=minn; n<=maxn; n++){
-            vocab[i].n_of_subwords += strlen(vocab[i].word)+3-n;
+            if(utf8_strlen(vocab[i].word)+2 < n) break;
+            vocab[i].n_of_subwords += utf8_strlen(vocab[i].word)+3-n;
         }
+
         vocab[i].subword_ids = (unsigned int*)malloc(sizeof(unsigned int)*vocab[i].n_of_subwords);
         vocab[i].subwords = (char**)malloc(sizeof(char*) * vocab[i].n_of_subwords);
         for(int k=0; k<vocab[i].n_of_subwords; k++){
-            vocab[i].subwords[k] = (char*)calloc((strlen(vocab[i].word)+2)*4+1, sizeof(char));
+            vocab[i].subwords[k] = (char*)calloc((utf8_strlen(vocab[i].word)+2)*4+1, sizeof(char));
         }
 
         hash_key = getHash(vocab[i].word, size_of_word_hash);
@@ -600,7 +603,7 @@ void calculateSubwordsToBuff(char* word, char** subwords){
     int word_bytes;
 
     if(len > maxn){
-        strncpy(subwords[idx], word, len); // seg fault happens here
+        strncpy(subwords[idx], word, len);
         idx++;
     }
 
@@ -730,10 +733,10 @@ char* IDtoWord(int id){
 void getWordVectorFromString(char* word, float* target_vec, int* subwords_id, int n_of_subwords){
 
     if(n_of_subwords==0){
-        n_of_subwords=1;
+        if(utf8_strlen(word)+2 > maxn) n_of_subwords=1;
         for (int n=minn; n<=maxn; n++){
-            if(n>strlen(word)+2) break;
-            n_of_subwords += strlen(word)-n+3;
+            if(utf8_strlen(word)+2 < n) break;
+            n_of_subwords += utf8_strlen(word)+3-n;
         }
     }
 
@@ -744,7 +747,7 @@ void getWordVectorFromString(char* word, float* target_vec, int* subwords_id, in
     tmp[strlen(word)+1] = EOW;
 
     for(int i=0; i<n_of_subwords; i++){
-        subwords[i] = (char*)calloc((strlen(word)+2)*4+1, sizeof(char));
+        subwords[i] = (char*)calloc((utf8_strlen(word)+2)*4+1, sizeof(char));
     }
 
     calculateSubwordsToBuff(tmp, subwords);
