@@ -46,6 +46,7 @@ int hidden_size;
 int epoch;
 float starting_lr;
 float lr;
+int lr_rate = 100;
 
 // subsampling
 float sample = 1e-4;
@@ -64,6 +65,27 @@ float* expTable;
 float* word_vec;
 float* subword_vec;
 float* out_layer_vec;
+
+int utf8_charlen(unsigned char c){
+    if ((c & 0x80) == 0x00) return 1;       // 0xxxxxxx
+    else if ((c & 0xE0) == 0xC0) return 2;  // 110xxxxx
+    else if ((c & 0xF0) == 0xE0) return 3;  // 1110xxxx
+    else if ((c & 0xF8) == 0xF0) return 4;  // 11110xxx
+    return 1; // invalid fallback  
+}
+
+int utf8_strlen(const char *s){
+    int len = 0;
+    int i = 0;
+    int nbytes = strlen(s);
+
+    while (i < nbytes){
+        int char_len = utf8_charlen((unsigned char)s[i]);
+        i += char_len;
+        len++;
+    }
+    return len;
+}
 
 
 void* training_thread(void* id_ptr){
@@ -109,7 +131,7 @@ void* training_thread(void* id_ptr){
 
             for (target_pos=0; target_pos<sentence_len; target_pos++){
                 // 0. Calculate current learning rate
-                if (local_trained_word - local_last_trained_word > 10000 || local_trained_word==0){
+                if (local_trained_word - local_last_trained_word > lr_rate || local_trained_word==0){
                     trained_word_count += local_trained_word - local_last_trained_word;
                     local_last_trained_word = local_trained_word;
 
@@ -532,27 +554,6 @@ void calculateSubwordIDs(){
 
     free(cur_word);
     printf("Done\n");
-}
-
-int utf8_charlen(unsigned char c){
-    if ((c & 0x80) == 0x00) return 1;       // 0xxxxxxx
-    else if ((c & 0xE0) == 0xC0) return 2;  // 110xxxxx
-    else if ((c & 0xF0) == 0xE0) return 3;  // 1110xxxx
-    else if ((c & 0xF8) == 0xF0) return 4;  // 11110xxx
-    return 1; // invalid fallback  
-}
-
-int utf8_strlen(const char *s){
-    int len = 0;
-    int i = 0;
-    int nbytes = strlen(s);
-
-    while (i < nbytes){
-        int char_len = utf8_charlen((unsigned char)s[i]);
-        i += char_len;
-        len++;
-    }
-    return len;
 }
 
 // Finds all subwords
