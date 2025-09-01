@@ -478,6 +478,7 @@ void readWordsFromFile(char* file_name){
     }
 
     free(cur_word);
+    file_size = ftell(fp);
     fclose(fp);
     printf("Done\n");
 }
