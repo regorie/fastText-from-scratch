@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#define MAX_VOCAB_SIZE 10000000 // maximum vocabulary size 10M
+#define MAX_VOCAB_SIZE 30000000 // maximum vocabulary size 30M
 #define MAX_STRING 100
 #define MAX_SENTENCE_LENGTH 1000
 #define MAX_CODE_LENGTH 40

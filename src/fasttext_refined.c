@@ -440,7 +440,7 @@ void readWordsFromFile(char* file_name){
 
     while((ch = fgetc(fp)) != EOF){
         if(ch==13) continue;
-        if(ch == ' ' || ch == '\n' || ch == '\t' || ch == '\0'){
+        if(ch==' ' || ch=='\n' || ch=='\t' || ch=='\v' || ch=='\f' || ch=='\r' || ch=='\0'){
             if (word_length == 0) continue;
 
             total_word_count++;
@@ -651,7 +651,7 @@ int readSentenceFromFile(FILE* fp, int* sentence, long long thread_id, int iter,
     skip_cnt[thread_id] = 0;
     while(!feof(fp)){
         ch = fgetc(fp);
-        if(ch==' ' || ch=='\t' || ch=='\n'){
+        if(ch==' ' || ch=='\n' || ch=='\t' || ch=='\v' || ch=='\f' || ch=='\r' || ch=='\0'){
 
             if(word_length==0) continue;
             cur_word[word_length] = 0;
