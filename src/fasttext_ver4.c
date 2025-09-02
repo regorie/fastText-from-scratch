@@ -7,7 +7,7 @@
 #include <pthread.h>
 #include <locale.h>
 
-#include "fasttext.h"
+//#include "fasttext.h"
 
 // cars for IO
 char input_file[MAX_STRING];
@@ -80,7 +80,7 @@ void* training_thread(void* id_ptr){
 
     long long word_per_thread = total_words / n_of_thread;
     
-    lr = starting_lr;
+    lr = starting_lr; // -> move to main
     for(int ep=0; ep<epoch; ep++){
         clock_t start = time(NULL);
 
@@ -454,7 +454,7 @@ void readWordsFromFile(char* file_name){
         }
         else{
             cur_word[word_length++] = ch;
-            if(word_length >= MAX_STRING - 2) word_length--;
+            if(word_length >= MAX_STRING - 3) word_length--;
         }
     }
 
@@ -492,7 +492,7 @@ void reduceWords(){
         }
 
         vocab[i].subword_ids = (int*)malloc(sizeof(int) * vocab[i].n_of_subwords);
-        vocab[i].subwords = (char**)malloc(sizeof(char*) * vocab[i].n_of_subwords);
+        vocab[i].subwords = (char**)malloc(sizeof(char*) * vocab[i].n_of_subwords); // temporary sapce to save subword strings
         for(int subs=0; subs<vocab[i].n_of_subwords; subs++){
             vocab[i].subwords[subs] = (char*)calloc((strlen(vocab[i].word+2))*4+1, sizeof(char));
         }
@@ -599,6 +599,7 @@ void calculateSubwords(char* word, char** subwords){
     }
 }
 
+// Pass 0 to reset word hash, 1 to reset subword hash
 void resetHashTable(int mode){
     if(mode==0){
         // reset word hash
@@ -660,7 +661,6 @@ int readSentenceFromFile(FILE* fp, long long* sentence, long long thread_id, int
                 return sentence_length;
             }
         }
-        else if(ch=='\r') continue;
         else{
             if(word_length >= MAX_STRING - 3) word_length--;
             cur_word[word_length++] = ch;
@@ -716,7 +716,7 @@ char* IDtoWord(int id){
 void getWordVectorFromString(char* word, float* word_vec, int* subwords_id, int n_of_subwords){
 
     char** subwords = (char**)malloc(sizeof(char*)*n_of_subwords);
-    char* tmp = (char*)calloc(strlen(word)+2,sizeof(char));
+    char* tmp = (char*)calloc(strlen(word)+3,sizeof(char));
     tmp[0] = BOW;
     strncpy(tmp[1], word, strlen(word));
     tmp[strlen(word)+1] = EOW;
