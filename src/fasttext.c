@@ -401,8 +401,8 @@ int main(int argc, char** argv){
     free(subword_vec);
     free(expTable);
     for(int i=0; i<n_of_vocab; i++){
-        free(vocab[i].code);
-        free(vocab[i].point);
+        //free(vocab[i].code);
+        //free(vocab[i].point);
         free(vocab[i].subword_ids);
     }
     free(vocab);
@@ -516,8 +516,8 @@ void reduceWords(){
             n_of_vocab = i;
             break;
         }
-        vocab[i].code = (char*)calloc(MAX_CODE_LENGTH, sizeof(char));
-        vocab[i].point = (int*)calloc(MAX_CODE_LENGTH, sizeof(int));
+        //vocab[i].code = (char*)calloc(MAX_CODE_LENGTH, sizeof(char));
+        //vocab[i].point = (int*)calloc(MAX_CODE_LENGTH, sizeof(int));
 
         if(utf8_strlen(vocab[i].word)+2 > maxn) vocab[i].n_of_subwords = 1;
         else vocab[i].n_of_subwords = 0;
@@ -765,7 +765,6 @@ void getWordVectorFromString(char* word, float* target_vec, int* subwords_id, in
     for(int i=0; i<n_of_subwords; i++){
         subwords[i] = (char*)calloc((utf8_strlen(word)+2)*4+1, sizeof(char));
     }
-
     calculateSubwordsToBuff(tmp, subwords);
 
     unsigned int hash_key;
