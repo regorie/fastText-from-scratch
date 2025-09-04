@@ -14,7 +14,7 @@
 
 char input_file[MAX_STRING];
 char output_file[MAX_STRING];
-int binary = 1;
+int binary = 0;
 long long file_size = 0;
 
 int n_of_thread;
@@ -258,7 +258,7 @@ int main(int argc, char** argv){
     for(int a=0; a<n_of_words; a++){
         fprintf(outfp, "%s ", vocab[a].word);
         
-        if(binary) {
+        if(binary==1) {
             for(int k=0;k<strlen(vocab[a].word);k++){
                 if(!isalpha(vocab[a].word[k])){ nonalphabet_cnt++;}
             }

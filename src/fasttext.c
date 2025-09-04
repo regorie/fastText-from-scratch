@@ -425,7 +425,9 @@ unsigned int getHash(char* word, int max_hash){
     return hash_key;
 }
 
+
 void readWordsFromFile(char* file_name){
+
     printf("Reading words from file... ");
     resetHashTable();
 
@@ -447,6 +449,18 @@ void readWordsFromFile(char* file_name){
             cur_word[word_length] = 0;
             word_length = 0;
             hash_key = getHash(cur_word, size_of_word_hash);
+
+            // reduce the size of vocab if it reaches the limit
+            if(n_of_vocab >= size_of_word_hash){
+                for(int idx=0; idx<n_of_vocab; idx++){
+                    if(vocab[idx].count < min_count){
+                        vocab[idx].count = 0;
+                        memset(&vocab[idx].word, 0, sizeof(vocab[idx].word));
+                        word_hash[idx] = -1;
+                        n_of_vocab--;
+                    }
+                }
+            }
 
             while(1){
                 if(word_hash[hash_key]==-1){
