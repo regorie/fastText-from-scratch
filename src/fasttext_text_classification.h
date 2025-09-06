@@ -1,11 +1,12 @@
-// same with ver1, but to avoid confusion
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
 #define MAX_VOCAB_SIZE 10000000 // maximum vocabulary size 10M
+#define MAX_SENTENCE_LENGTH 1024*1024 // maximum number of characters in one sentence
+#define MAX_SENTENCE_WORD 160000 // maximum number of words in one sentence
 #define MAX_STRING 100
-#define MAX_SENTENCE_LENGTH 1000
+
 #define MAX_CODE_LENGTH 40
 
 #define EXP_TABLE_SIZE 1000
@@ -14,31 +15,43 @@
 struct WORD { // idx is id(hash table)
     int count;
     char word[MAX_STRING];
-    char* code;
-    int codelen;
-    int* point;
+    //char* code;
+    //int codelen;
+    //int* point;
 
     char** subwords;
     unsigned int* subword_ids;
     int n_of_subwords;
 };
 
-unsigned int getHash(char* word, int max_hash);
+struct LABEL {
+    int count;
+    char label[16];
+
+    char* code;
+    int codelen;
+    int* point;
+};
+
+unsigned int getHash(char* word, int max_hash_size); // calculate hash value
+
+// preparation
 void readWordsFromFile(char* file_name);
 void reduceWords();
-//void buildSubwordHash();
 void calculateSubwordIDs();
+void buildBinaryTree();
 
-void calculateSubwords(char* word, char** subwords);
+void calculateSubwords(char* word, int vocab_id);
+void calculateSubwordsToBuff(char* word, char** subwords);
 
-void getWordVectorFromString(char* word, float* word_vec, int* subwords_id, int n_of_subwords);
-void getWordVector(int id, float* word_vec);
-void getSentenceVector(int id, float* sent_vec);
-int searchVocabID(char* word);
-char* IDtoWord(int id);
+int getWordVector(int id, float* result_vec, int* subword_features, int* subword_idx);
+int getWordVectorFromString(char* word, float* result_vec, int* subword_features, int* subword_idx);
+void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, float* sent_vec, int* word_features, int* word_feature_idx, int* subword_features, int* subword_feature_idx);
+
+int getSentenceSample(FILE* fp, int* _label, int* sentence, char** unknown_words);
+
+// some utils
+int wordToID(char* word);
+//char* IDToWord(int id);
 
 void resetHashTable();
-void initUnigramTable();
-
-int readSentenceFromFile(FILE* fp, long long* sentence, long long id, int iter, char** unkown_words);
-
