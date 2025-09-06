@@ -4,6 +4,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <locale.h>
+#include <limits.h>
 
 #include "fasttext_text_classification.h" // change later!
 
@@ -280,8 +281,8 @@ int main(int argc, char** argv){
         fclose(outfp);
     }
 
-    int* tmp[100];
-    int* tmp2[100];
+    int tmp[100];
+    int tmp2[100];
 
     strcat(output_file_word, output_file);
     printf("output file: %s\n", output_file_word);
@@ -378,7 +379,7 @@ void readWordsFromFile(char* file_name){
                     label[l].count=1;
 
                     label[l].code = (char*)calloc(MAX_CODE_LENGTH, sizeof(char));
-                    label[l].point = (char*)calloc(MAX_CODE_LENGTH, sizeof(int));
+                    label[l].point = (int*)calloc(MAX_CODE_LENGTH, sizeof(int));
                 }
 
                 continue;
