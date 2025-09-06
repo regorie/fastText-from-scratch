@@ -41,6 +41,7 @@ int n_of_samples = 0;
 int n_of_trained_samples = 0;
 
 struct LABEL* label;
+int size_of_label = 10;
 int n_of_label = 0;
 
 // training hyperparameters
@@ -183,7 +184,7 @@ void* training_thread(void* id_ptr){
 }
 
 int main(int argc, char** argv){
-    if(argc < 9){
+    if(argc < 6){
         printf("Usage example: ./fasttext-text hidden_size thread_number epoch data_file output_file\n");
         return -1;
     }
@@ -201,6 +202,7 @@ int main(int argc, char** argv){
     // 1. Preperation
     word_hash = (int*)calloc(size_of_word_hash, sizeof(int));
     vocab = (struct WORD*)calloc(size_of_vocab, sizeof(struct WORD));
+    label = (struct LABEL*)calloc(size_of_label, sizeof(struct LABEL));
 
     readWordsFromFile(input_file);
     reduceWords();
@@ -374,6 +376,11 @@ void readWordsFromFile(char* file_name){
                     }
                 }
                 if(l>=n_of_label){ // new label added
+                    if(n_of_label >= size_of_label){
+                        size_of_label += 2;
+                        label = realloc(label, size_of_label*sizeof(struct LABEL));
+                        if(label==NULL){ printf("Label reallocation failed\n"); exit(1);}
+                    }
                     n_of_label++;
                     strcpy(label[l].label, cur_word);
                     label[l].count=1;
@@ -408,7 +415,7 @@ void readWordsFromFile(char* file_name){
                         // allocate more space if necessary
                         size_of_vocab += 2048;
                         vocab = realloc(vocab, size_of_vocab*sizeof(struct WORD));
-                        if(vocab==NULL){ printf("Reallocation failed\n"); exit(1); }
+                        if(vocab==NULL){ printf("Vocab reallocation failed\n"); exit(1); }
                     }
                     word_hash[hash_key] = n_of_vocab;
                     vocab[n_of_vocab].count = 1;
