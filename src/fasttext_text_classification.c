@@ -440,6 +440,7 @@ void readWordsFromFile(char* file_name){
     file_size = ftell(fp);
     fclose(fp);
     printf("Done\n");
+    printf("Samples: %d\n", n_of_samples);
 }
 
 int _comp(const void* a, const void* b){
