@@ -835,10 +835,12 @@ int getSentenceSample(FILE* fp, int* _label, int* sentence, char** unknown_words
                 strcpy((unknown_words[sentence_length]), cur_word);
             }
             sentence[sentence_length++] = id_found;
+            if(ch=='\n') return sentence_length;
         }
         else {
             if(word_length >= MAX_STRING-3) word_length--;
             cur_word[word_length++] = ch;
         }
     }
+    return sentence_length;
 }
