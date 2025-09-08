@@ -132,7 +132,7 @@ void* training_thread(void* id_ptr){
 
             if(lr < starting_lr*0.0001) lr = starting_lr*0.0001;
             if(id==0){
-                printf("\nLearning rate: %f, Progress: %.4f, time: %ld", lr, (float)(n_of_local_trained_sample)/(float)(sample_per_thread), time(NULL)-start);
+                printf("\rLearning rate: %f, Progress: %.4f, time: %ld", lr, (float)(n_of_local_trained_sample)/(float)(sample_per_thread), time(NULL)-start);
                 fflush(stdout);
             }
 
@@ -178,7 +178,7 @@ void* training_thread(void* id_ptr){
                     subword_vec[i*hidden_size+h] += layer_grad[h];
                 }
             }
-
+            n_of_local_trained_sample++;
         }
     }
 }
