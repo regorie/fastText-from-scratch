@@ -283,8 +283,9 @@ int main(int argc, char** argv){
         fclose(outfp);
     }
 
-    int tmp[100];
-    int tmp2[100];
+    int* tmp=(int*)malloc(sizeof(int)*1000);
+    int* tmp2;
+    *tmp2=0;
 
     strcat(output_file_word, output_file);
     printf("output file: %s\n", output_file_word);
@@ -323,7 +324,7 @@ int main(int argc, char** argv){
     }
     free(vocab);
     free(word_hash);
-
+    free(tmp);
 
     printf("Done\n");
     return 0;
