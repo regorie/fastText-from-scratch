@@ -264,7 +264,7 @@ int main(int argc, char** argv){
     strcat(output_file_subword, output_file);
     printf("output file: %s\n", output_file_subword);
     FILE* outfp = fopen(output_file_subword, "wb");
-    if(outfp == NULL) {printf("subword file open error\n");}
+    if(outfp == NULL) {printf("subword file open error\n"); exit(1); }
     else{
         fprintf(outfp, "%d %d\n", size_of_subword_hash, hidden_size);
         for(int i=0; i<size_of_subword_hash; i++){
@@ -280,23 +280,23 @@ int main(int argc, char** argv){
             }
             fprintf(outfp, "\n");
         }
-        fclose(outfp);
     }
+    fclose(outfp);
 
     int* tmp=(int*)malloc(sizeof(int)*1000);
-    int* tmp2;
-    *tmp2=0;
+    int tmp2 = 0;
 
     strcat(output_file_word, output_file);
     printf("output file: %s\n", output_file_word);
     outfp = fopen(output_file_word, "wb");
-    if(outfp == NULL) printf("word file open error\n");
+    if(outfp == NULL) {printf("word file open error\n"); exit(1);}
     else{
         fprintf(outfp, "%d %d\n", n_of_vocab, hidden_size);
 
         float target_vector[hidden_size];
         for(int i=0; i<n_of_vocab; i++){
-            getWordVector(i, target_vector, tmp, tmp2);
+            tmp2=0;
+            getWordVector(i, target_vector, tmp, &tmp2);
 
             fprintf(outfp, "%s ", vocab[i].word);
             if(binary) {
@@ -311,8 +311,9 @@ int main(int argc, char** argv){
             }
             fprintf(outfp, "\n");
         }
-        fclose(outfp);
     }
+    fclose(outfp);
+    
 
     // 4. Free everything
     free(id);
@@ -484,7 +485,6 @@ void reduceWords(){
 
     printf("Done\n");
     printf("number of vocab: %d\n", n_of_vocab);
-   
 }
 
 void calculateSubwordIDs(){
