@@ -97,7 +97,7 @@ int main(int argc, char** argv){
     for(int i=0; i<size_of_word_hash; i++) word_hash[i] = -1;
 
     word_vec = (float*)malloc(sizeof(float)*n_of_vocab*hidden_size);
-    char* curr_word = (char*)calloc(MAX_STRING-1, sizeof(char));
+    char* curr_word = (char*)calloc(MAX_STRING, sizeof(char));
     int word_id=0;
     while(fgets(buff, MAX_STRING-1, word_fp)){
         char* ptr = buff;
@@ -135,7 +135,7 @@ int main(int argc, char** argv){
 
     subword_vec = (float*)malloc(sizeof(float)*size_of_subword_hash*hidden_size);
     int subword_idx=0;
-    while(fgets(buff, MAX_STRING-1, word_fp)){
+    while(fgets(buff, MAX_STRING-1, subword_fp)){
         char* ptr = buff;
         int n=0;
 
