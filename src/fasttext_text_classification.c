@@ -66,7 +66,7 @@ float* expTable;
 // model parameters
 float* word_vec;
 float* subword_vec;
-
+float* output_layer;
 
 int utf8_charlen(unsigned char c){
     if ((c & 0x80) == 0x00) return 1;       // 0xxxxxxx
@@ -109,7 +109,7 @@ void* training_thread(void* id_ptr){
     int sample_per_thread = n_of_samples/n_of_thread+1;
 
     float layer_grad[hidden_size];
-    //float hidden_value[hidden_size];
+    float middle_value[n_of_label];
 
     FILE* infp = fopen(input_file, "r");
 
@@ -143,27 +143,34 @@ void* training_thread(void* id_ptr){
             getSentenceVector(sentence, sentence_len, unknown_words, sentence_vector, 
                 word_features, &word_feature_idx, subword_features, &subword_feature_idx);
 
+            for(int l=0; l<n_of_label; l++){
+                middle_value[l] = 0.0;
+                for(int h=0; h<hidden_size; h++){
+                    middle_value[l] += sentence_vector[h] * output_layer[l*hidden_size+h];
+                }
+            }
+
             float f, g;
-            for(int d=0; d<label[cur_label].codelen; d++){
-                int current_path = label[cur_label].point[d];
+            for(int d=0; d<label[cur_label-1].codelen; d++){
+                int current_path = label[cur_label-1].point[d];
 
                 // dot product
                 f=0.0;
-                for(int h=0; h<hidden_size; h++){
-                    f += sentence_vector[h] * nodes[current_path*hidden_size+h];
+                for(int l=0; l<n_of_label; l++){
+                    f += middle_value[l] * nodes[current_path*n_of_label+l];
                 }
                 //sigmoid
                 if(f<=-MAX_EXP || f>=MAX_EXP) continue;
                 else f = expTable[(int)((f+MAX_EXP)*(EXP_TABLE_SIZE/MAX_EXP/2))];
 
                 //backward pass
-                g = (1-label[cur_label].code[d]-f);
+                g = (1-label[cur_label-1].code[d]-f);
                 g *= lr;
 
                 //calculate gradient and update binary tree
-                for(int h=0; h<hidden_size; h++){
-                    layer_grad[h] +=g * nodes[current_path*hidden_size+h];
-                    nodes[current_path*hidden_size] += g*sentence_vector[h];
+                for(int l=0; l<n_of_label; l++){
+                    layer_grad[l] +=g * nodes[current_path*n_of_label+l];
+                    nodes[current_path*n_of_label] += g*middle_value[l];
                 }
             }
 
@@ -230,15 +237,22 @@ int main(int argc, char** argv){
             random_number = random_number * (unsigned long long)25214903917 + 11;
             word_vec[i*hidden_size + h] = (((random_number & 0xFFFF) / (float)65536) - 0.5) / hidden_size;
         }
-    } 
+    }
+    output_layer = (float*)malloc(sizeof(float)*hidden_size*n_of_label);
+    for(int i=0; i<n_of_label; i++){
+        for(int h=0; h<hidden_size; h++){
+            random_number = random_number * (unsigned long long)25214903917 + 11;
+            output_layer[i*hidden_size+h] = (((random_number & 0xFFFF) / (float)65536) - 0.5) / hidden_size;
+        }
+    }
     
     // Initialize binary tree
     printf("n_of_inner_node: %d\n", n_of_inner_node);
-    nodes = (float*)malloc(sizeof(float)*hidden_size*n_of_inner_node);
+    nodes = (float*)malloc(sizeof(float)*n_of_label*n_of_inner_node);
     for(int a=0; a<n_of_inner_node; a++){
-        for(int b=0; b<hidden_size; b++){
+        for(int b=0; b<n_of_label; b++){
             random_number = random_number * (unsigned long long)25214903917 + 11;
-            nodes[a*hidden_size + b] = 0.0;
+            nodes[a*n_of_label + b] = 0.0;
         }
     }
 
@@ -291,7 +305,7 @@ int main(int argc, char** argv){
     outfp = fopen(output_file_word, "wb");
     if(outfp == NULL) {printf("word file open error\n"); exit(1);}
     else{
-        fprintf(outfp, "%d %d\n", n_of_vocab, hidden_size);
+        fprintf(outfp, "%d %d %d\n", n_of_vocab, hidden_size, n_of_label);
 
         float target_vector[hidden_size];
         for(int i=0; i<n_of_vocab; i++){
@@ -374,16 +388,16 @@ void readWordsFromFile(char* file_name){
 
                 if(label_num>=n_of_label){ // new label added
                     
-                    size_of_label = label_num+1;
+                    size_of_label = label_num;
                     label = realloc(label, size_of_label*sizeof(struct LABEL));
                     if(label==NULL){ printf("Label reallocation failed\n"); exit(1);}
                 
-                    label[label_num].count=1;
+                    label[label_num-1].count=1;
 
                     n_of_label=label_num;
                 }
                 else {
-                    label[label_num].count++;
+                    label[label_num-1].count++;
                 }
 
                 continue;
