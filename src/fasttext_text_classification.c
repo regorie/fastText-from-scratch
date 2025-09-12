@@ -41,8 +41,8 @@ int n_of_samples = 0;
 int n_of_trained_samples = 0;
 
 struct LABEL* label;
-int size_of_label = 10;
-int n_of_label = 0;
+int size_of_label = 1;
+int n_of_label = 1;
 
 // training hyperparameters
 //int window_size;
@@ -386,12 +386,15 @@ void readWordsFromFile(char* file_name){
                 char* tmp = cur_word+9;
                 int label_num = atoi(tmp);
 
-                if(label_num>=n_of_label){ // new label added
+                if(label_num>n_of_label){ // new label added
                     
                     size_of_label = label_num;
                     label = realloc(label, size_of_label*sizeof(struct LABEL));
                     if(label==NULL){ printf("Label reallocation failed\n"); exit(1);}
                 
+                    for(int k=n_of_label; k<label_num; k++){
+                        label[k].count = 0;
+                    }
                     label[label_num-1].count=1;
 
                     n_of_label=label_num;
