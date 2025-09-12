@@ -126,7 +126,7 @@ int main(int argc, char** argv){
     FILE* subword_fp = fopen(subword_file, "rb");
 
     fgets(buff, MAX_STRING-1, subword_fp);
-    if(sscanf(buff, "%d %d %d", &size_of_subword_hash, &hidden_size) != 2){
+    if(sscanf(buff, "%d %d", &size_of_subword_hash, &hidden_size) != 2){
         printf("Error: failed to read header from subword file\n");
         fclose(subword_fp);
         free(buff);
