@@ -217,7 +217,7 @@ int main(int argc, char** argv){
         }
 
         // Final prediction
-        int answer = max_idx(prediction, n_of_label);
+        int answer = max_index(prediction, n_of_label);
 
         if(answer == curr_label) correct_samples++;
         total_samples++;
