@@ -466,10 +466,8 @@ void readWordsFromFile(char* file_name){
     }
 
     for (int l=0; l<n_of_label; l++){
-        if(label[l].code==NULL){
-            label[l].code = (char*)calloc(MAX_CODE_LENGTH, sizeof(char));
-            label[l].point = (int*)calloc(MAX_CODE_LENGTH, sizeof(int));
-        }
+        label[l].code = (char*)calloc(MAX_CODE_LENGTH, sizeof(char));
+        label[l].point = (int*)calloc(MAX_CODE_LENGTH, sizeof(int));
     }
 
     free(cur_word);
