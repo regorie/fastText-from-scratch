@@ -82,9 +82,9 @@ int main(int argc, char** argv){
 
     // Read word file
     FILE* word_fp = fopen(word_file, "rb");
-    char* buff = (char*)calloc(MAX_STRING, sizeof(char));
+    char* buff = (char*)calloc(MAX_SENTENCE_LENGTH, sizeof(char));
 
-    fgets(buff, MAX_STRING-1, word_fp);
+    fgets(buff, MAX_SENTENCE_LENGTH-1, word_fp);
     if(sscanf(buff, "%d %d %d", &n_of_vocab, &hidden_size, &n_of_label) != 3){
         printf("Error: failed to read header from word file\n");
         fclose(word_fp);
@@ -99,7 +99,7 @@ int main(int argc, char** argv){
     word_vec = (float*)malloc(sizeof(float)*n_of_vocab*hidden_size);
     char* curr_word = (char*)calloc(MAX_STRING, sizeof(char));
     int word_id=0;
-    while(fgets(buff, MAX_STRING-1, word_fp)){
+    while(fgets(buff, MAX_SENTENCE_LENGTH-1, word_fp)){
         char* ptr = buff;
         int n=0;
         sscanf(ptr, "%s%n", curr_word, &n); // read word
@@ -125,7 +125,7 @@ int main(int argc, char** argv){
     // Read subword file
     FILE* subword_fp = fopen(subword_file, "rb");
 
-    fgets(buff, MAX_STRING-1, subword_fp);
+    fgets(buff, MAX_SENTENCE_LENGTH-1, subword_fp);
     if(sscanf(buff, "%d %d", &size_of_subword_hash, &hidden_size) != 2){
         printf("Error: failed to read header from subword file\n");
         fclose(subword_fp);
@@ -135,7 +135,7 @@ int main(int argc, char** argv){
 
     subword_vec = (float*)malloc(sizeof(float)*size_of_subword_hash*hidden_size);
     int subword_idx=0;
-    while(fgets(buff, MAX_STRING-1, subword_fp)){
+    while(fgets(buff, MAX_SENTENCE_LENGTH-1, subword_fp)){
         char* ptr = buff;
         int n=0;
 
@@ -153,7 +153,7 @@ int main(int argc, char** argv){
     FILE* output_layer_fp = fopen(output_weight_file, "rb");
     output_layer_vec = (float*)malloc(sizeof(float)*hidden_size*n_of_label);
     for(int l=0; l<n_of_label; l++){
-        fgets(buff, MAX_STRING-1, output_layer_fp);
+        fgets(buff, MAX_SENTENCE_LENGTH-1, output_layer_fp);
         char* ptr = buff;
         int n=0;
         for(int h=0; h<hidden_size; h++){
@@ -164,13 +164,11 @@ int main(int argc, char** argv){
         }
     }
     fclose(output_layer_fp);
-    free(buff);
 
     // Read test data file
     FILE* data_fp = fopen(data_file, "rb");
     int total_samples=0;
     int correct_samples=0;
-    buff = (char*)calloc(MAX_SENTENCE_LENGTH, sizeof(char));
     
     // Predict
     while(fgets(buff, MAX_SENTENCE_LENGTH-1, data_fp)){
