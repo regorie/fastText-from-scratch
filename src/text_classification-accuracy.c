@@ -68,7 +68,7 @@ int max_index(const float* arr, int size){
 int main(int argc, char** argv){
 
     if(argc<7){
-        printf("Usage: ./text-classification minn maxn data_file word_file subword_file output_weight_file");
+        printf("Usage: ./text-classification minn maxn data_file word_file subword_file output_weight_file\n");
         return -1;
     }
     else{
