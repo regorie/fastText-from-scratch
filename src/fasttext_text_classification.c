@@ -369,26 +369,21 @@ void readWordsFromFile(char* file_name){
                 word_length = 0;
                 n_of_samples++;
 
-                // count number of label
-                int l;
-                for(l=0; l<n_of_label; l++){
-                    if(strcmp(cur_word, label[l].label)==0){
-                        label[l].count++;
-                        break;
-                    }
-                }
-                if(l>=n_of_label){ // new label added
-                    if(n_of_label >= size_of_label){
-                        size_of_label += 2;
-                        label = realloc(label, size_of_label*sizeof(struct LABEL));
-                        if(label==NULL){ printf("Label reallocation failed\n"); exit(1);}
-                    }
-                    n_of_label++;
-                    strcpy(label[l].label, cur_word);
-                    label[l].count=1;
+                char* tmp = cur_word+9;
+                int label_num = atoi(tmp);
 
-                    label[l].code = (char*)calloc(MAX_CODE_LENGTH, sizeof(char));
-                    label[l].point = (int*)calloc(MAX_CODE_LENGTH, sizeof(int));
+                if(label_num>=n_of_label){ // new label added
+                    
+                    size_of_label = label_num+1;
+                    label = realloc(label, size_of_label*sizeof(struct LABEL));
+                    if(label==NULL){ printf("Label reallocation failed\n"); exit(1);}
+                
+                    label[label_num].count=1;
+
+                    n_of_label=label_num;
+                }
+                else {
+                    label[label_num].count++;
                 }
 
                 continue;
@@ -435,6 +430,13 @@ void readWordsFromFile(char* file_name){
         else {
             cur_word[word_length++] = ch;
             if(word_length>=MAX_STRING-3) word_length--;
+        }
+    }
+
+    for (int l=0; l<n_of_label; l++){
+        if(label[l].code==NULL){
+            label[l].code = (char*)calloc(MAX_CODE_LENGTH, sizeof(char));
+            label[l].point = (int*)calloc(MAX_CODE_LENGTH, sizeof(int));
         }
     }
 
@@ -821,12 +823,9 @@ int getSentenceSample(FILE* fp, int* _label, int* sentence, char** unknown_words
 
             if(strncmp(cur_word, "__label__", 9)==0){
                 // label
-                for(int l=0; l<n_of_label; l++){
-                    if(strcmp(label[l].label, cur_word)==0){
-                        *_label=l;
-                        break;
-                    }
-                }
+                char* tmp = cur_word+9;
+                *_label = atoi(tmp);
+
                 continue;
             }
 

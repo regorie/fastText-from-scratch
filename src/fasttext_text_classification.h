@@ -26,7 +26,8 @@ struct WORD { // idx is id(hash table)
 
 struct LABEL {
     int count;
-    char label[16];
+    int class_idx;
+    //char label[16];
 
     char* code;
     int codelen;
