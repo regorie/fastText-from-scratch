@@ -13,6 +13,7 @@ char input_file[MAX_STRING];
 char output_file[MAX_STRING-9];
 char output_file_word[MAX_STRING]="word_";
 char output_file_subword[MAX_STRING]="subword_";
+char output_file_output_layer[MAX_STRING]="outlayer_";
 
 // file saving mode
 int binary;
@@ -327,7 +328,21 @@ int main(int argc, char** argv){
         }
     }
     fclose(outfp);
-    
+
+    strcat(output_file_output_layer, output_file);
+    printf("output file: %s\n", output_file_output_layer);
+    outfp = fopen(output_file_output_layer, "wb");
+    if(outfp == NULL) {printf("output layer file open error\n"); exit(1);}
+    else{
+        float current_vetor[hidden_size];
+        for(int i=0; i<n_of_label; i++){
+            for(int h=0; h<hidden_size; h++){
+                fwrite(&output_layer[i*hidden_size+h], sizeof(float), 1, outfp);
+            }
+            fprintf(outfp, "\n");
+        }
+    }
+    fclose(outfp);
 
     // 4. Free everything
     free(id);
