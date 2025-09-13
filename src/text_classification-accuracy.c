@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
-#include <pthread.h>
 #include <locale.h>
 #include <limits.h>
 
@@ -102,7 +101,7 @@ int main(int argc, char** argv){
     while(fgets(buff, MAX_SENTENCE_LENGTH-1, word_fp)){
         char* ptr = buff;
         int n=0;
-        sscanf(ptr, "%s%n", curr_word, &n); // read word
+        sscanf(ptr, "%99s%n", curr_word, &n); // read word
         ptr += n;
 
         unsigned int hash_key = getHash(curr_word, size_of_word_hash);
@@ -176,12 +175,15 @@ int main(int argc, char** argv){
         int n=0;
         
         // Read label of this sample
-        sscanf(ptr, "%s%n", curr_word, &n);
+        sscanf(ptr, "%99s%n", curr_word, &n);
         int curr_label = atoi(curr_word+9)-1;
 
         // Calculate senntence vector of sample sentence
         float sentence_vector[hidden_size];
-        while(sscanf(ptr, "%s%n", curr_word, &n) == 2){
+        for(int h=0; h<hidden_size; h++){
+            sentence_vector[h] = 0.0;
+        }
+        while(sscanf(ptr, "%99s%n", curr_word, &n) == 2){
             int oov = 0;
 
             unsigned int hash_key = getHash(curr_word, size_of_word_hash);
@@ -197,6 +199,9 @@ int main(int argc, char** argv){
             }
             else if (oov==1){ // word not in vocab
                 float oov_word[hidden_size];
+                for(int h=0; h<hidden_size; h++){
+                    oov_word[h] = 0.0;
+                }
                 getWordVectorFromString(curr_word, oov_word);
                 for(int h=0; h<hidden_size; h++){
                     sentence_vector[h] += oov_word[h];
@@ -208,6 +213,9 @@ int main(int argc, char** argv){
 
         // Output layer
         float prediction[n_of_label];
+        for(int h=0; h<hidden_size; h++){
+            prediction[h] = 0.0;
+        }
         for(int l=0; l<n_of_label; l++){
             for(int h=0; h<hidden_size; h++){
                 prediction[l] += sentence_vector[h] * output_layer_vec[l*hidden_size+h];
@@ -226,6 +234,7 @@ int main(int argc, char** argv){
     printf("Accuracy: %f (%d / %d)\n", (float)correct_samples/(float)total_samples, correct_samples, total_samples);
 
     free(curr_word);
+    free(buff);
     free(vocab);
     free(word_hash);
     free(word_vec);
@@ -291,5 +300,7 @@ void getWordVectorFromString(char* word, float* result_vec){
         }
     }
 
+    free(tmp);
+    free(cur_subword);
     return;
 }
