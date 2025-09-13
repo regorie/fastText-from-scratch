@@ -111,8 +111,10 @@ void* training_thread(void* id_ptr){
 
     float input_layer_grad[hidden_size];
     float output_layer_grad[hidden_size*n_of_label];
-    float middle_layer_grad[n_of_label];
-    float middle_value[n_of_label];
+
+    float logit_grad[n_of_label];
+    float logits[n_of_label];
+    float probs[n_of_label];
 
     FILE* infp = fopen(input_file, "r");
 
@@ -146,53 +148,54 @@ void* training_thread(void* id_ptr){
                 output_layer_grad[h] = 0.0;
             }
             for(int l=0; l<n_of_label; l++){
-                middle_layer_grad[l] = 0.0;
+                logit_grad[l] = 0.0;
             }
+
 
             getSentenceVector(sentence, sentence_len, unknown_words, sentence_vector, 
                 word_features, &word_feature_idx, subword_features, &subword_feature_idx);
 
             for(int l=0; l<n_of_label; l++){
-                middle_value[l] = 0.0;
+                logits[l] = 0.0;
                 for(int h=0; h<hidden_size; h++){
-                    middle_value[l] += sentence_vector[h] * output_layer[l*hidden_size+h];
+                    logits[l] += sentence_vector[h] * output_layer[l*hidden_size+h];
                 }
             }
 
-            float f, g;
-            for(int d=0; d<label[cur_label].codelen; d++){
-                int current_path = label[cur_label].point[d];
+            // build label vector
+            float label_one_hot[n_of_label];
+            for(int l=0; l<n_of_label; l++){
+                label_one_hot[l]=0.0;
+            }
+            label_one_hot[cur_label] = 1.0;
 
-                // dot product
-                f=0.0;
-                for(int l=0; l<n_of_label; l++){
-                    f += middle_value[l] * nodes[current_path*n_of_label+l];
-                }
-                //sigmoid
-                if(f<=-MAX_EXP || f>=MAX_EXP) continue;
-                else f = expTable[(int)((f+MAX_EXP)*(EXP_TABLE_SIZE/MAX_EXP/2))];
-
-                //backward pass
-                g = (1-label[cur_label].code[d]-f);
-                g *= lr;
-
-                //calculate gradient and update binary tree
-                for(int l=0; l<n_of_label; l++){
-                    middle_layer_grad[l] += g*nodes[current_path*n_of_label+l];
-                    nodes[current_path*n_of_label+l] += g*middle_value[l];
-                }
+            // loss
+            float max_logit = logits[0];
+            for (int l = 1; l < n_of_label; l++) if (logits[l] > max_logit) max_logit = logits[l];
+            float sum_exp = 0.0;
+            for (int l = 0; l < n_of_label; l++) {
+                logits[l] = exp(logits[l] - max_logit);
+                sum_exp += logits[l];
+            }
+            for (int l = 0; l < n_of_label; l++) {
+                probs[l] = logits[l] / sum_exp;
             }
 
-            //update out_layer gradient
+            // calculate gradient
+            for(int l=0; l<n_of_label; l++){
+                logit_grad[l] = probs[l] - label_one_hot[l];
+            }
+
+            // calculate output_layer gradient
             for(int l=0; l<n_of_label; l++){
                 for(int h=0; h<hidden_size; h++){
-                    output_layer_grad[l*hidden_size+h] += middle_layer_grad[l]*sentence_vector[h];
+                    output_layer_grad[l*hidden_size+h] += logit_grad[l] * sentence_vector[h];
                 }
             }
-            //update in_layer gradient
+            // calculate input_layer gradient
             for(int l=0; l<n_of_label; l++){
                 for(int h=0; h<hidden_size; h++){
-                    input_layer_grad[h] += middle_layer_grad[l] * output_layer[l*hidden_size+h];
+                    input_layer_grad[h] += logit_grad[l] * output_layer[l*hidden_size+h];
                 }
             }
             
