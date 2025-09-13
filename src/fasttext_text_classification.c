@@ -131,7 +131,7 @@ void* training_thread(void* id_ptr){
             // Calculate learning rate
             n_of_trained_samples += n_of_local_trained_sample - n_of_local_last_trained_sample;
             n_of_local_last_trained_sample = n_of_local_trained_sample;
-            lr = starting_lr*(1-n_of_trained_samples/(float)(epoch*n_of_trained_samples+1));
+            lr = starting_lr*(1-n_of_trained_samples/(float)(epoch*n_of_samples+1));
 
             if(lr < starting_lr*0.0001) lr = starting_lr*0.0001;
             if(id==0){
