@@ -45,6 +45,8 @@ struct LABEL* label;
 int size_of_label = 1;
 int n_of_label = 1;
 
+int n_of_features;
+
 // training hyperparameters
 //int window_size;
 int hidden_size;
@@ -199,6 +201,9 @@ void* training_thread(void* id_ptr){
                     input_layer_grad[h] += logit_grad[l] * output_layer[l*hidden_size+h];
                 }
             }
+            for(int h=0; h<hidden_size; h++){
+                input_layer_grad[h] /= n_of_features;
+            }
             
             //update in_layers
             for(int i=0; i<word_feature_idx; i++){
@@ -222,7 +227,6 @@ void* training_thread(void* id_ptr){
     }
     fclose(infp);
     free(sentence);
-    return;
 }
 
 int main(int argc, char** argv){
@@ -817,7 +821,7 @@ void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, fl
     float buf_vec[hidden_size];
     *subword_idx=0;
     *word_idx=0;
-    int n_of_features = 0;
+    n_of_features = 0;
 
     // reset sentence vector first
     for(int h=0; h<hidden_size; h++){
