@@ -160,8 +160,8 @@ void* training_thread(void* id_ptr){
             }
 
             float f, g;
-            for(int d=0; d<label[cur_label-1].codelen; d++){
-                int current_path = label[cur_label-1].point[d];
+            for(int d=0; d<label[cur_label].codelen; d++){
+                int current_path = label[cur_label].point[d];
 
                 // dot product
                 f=0.0;
@@ -173,13 +173,13 @@ void* training_thread(void* id_ptr){
                 else f = expTable[(int)((f+MAX_EXP)*(EXP_TABLE_SIZE/MAX_EXP/2))];
 
                 //backward pass
-                g = (1-label[cur_label-1].code[d]-f);
+                g = (1-label[cur_label].code[d]-f);
                 g *= lr;
 
                 //calculate gradient and update binary tree
                 for(int l=0; l<n_of_label; l++){
                     middle_layer_grad[l] += g*nodes[current_path*n_of_label+l];
-                    nodes[current_path*n_of_label] += g*middle_value[l];
+                    nodes[current_path*n_of_label+l] += g*middle_value[l];
                 }
             }
 
@@ -216,6 +216,9 @@ void* training_thread(void* id_ptr){
             n_of_local_trained_sample++;
         }
     }
+    fclose(infp);
+    free(sentence);
+    return;
 }
 
 int main(int argc, char** argv){
@@ -382,6 +385,7 @@ int main(int argc, char** argv){
     free(vocab);
     free(word_hash);
     free(tmp);
+    free(label);
 
     printf("Done\n");
     return 0;
@@ -881,7 +885,7 @@ int getSentenceSample(FILE* fp, int* _label, int* sentence, char** unknown_words
             if(strncmp(cur_word, "__label__", 9)==0){
                 // label
                 char* tmp = cur_word+9;
-                *_label = atoi(tmp);
+                *_label = atoi(tmp)-1;
 
                 continue;
             }
