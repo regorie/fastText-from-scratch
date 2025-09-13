@@ -127,8 +127,6 @@ void* training_thread(void* id_ptr){
 
         if (id==0) { printf("\nRunning Epoch %d\n", ep+1); }
         while(1){
-            sentence_len = getSentenceSample(infp, &cur_label, sentence, unknown_words);
-            if (sentence_len <= 0) break;
 
             // Calculate learning rate
             n_of_trained_samples += n_of_local_trained_sample - n_of_local_last_trained_sample;
@@ -151,6 +149,9 @@ void* training_thread(void* id_ptr){
                 logit_grad[l] = 0.0;
             }
 
+            // forward pass
+            sentence_len = getSentenceSample(infp, &cur_label, sentence, unknown_words);
+            if (sentence_len <= 0) break;
 
             getSentenceVector(sentence, sentence_len, unknown_words, sentence_vector, 
                 word_features, &word_feature_idx, subword_features, &subword_feature_idx);
@@ -162,14 +163,14 @@ void* training_thread(void* id_ptr){
                 }
             }
 
-            // build label vector
+            // build label one hot vector
             float label_one_hot[n_of_label];
             for(int l=0; l<n_of_label; l++){
                 label_one_hot[l]=0.0;
             }
             label_one_hot[cur_label] = 1.0;
 
-            // loss
+            // softmax
             float max_logit = logits[0];
             for (int l = 1; l < n_of_label; l++) if (logits[l] > max_logit) max_logit = logits[l];
             float sum_exp = 0.0;
@@ -202,18 +203,18 @@ void* training_thread(void* id_ptr){
             //update in_layers
             for(int i=0; i<word_feature_idx; i++){
                 for(int h=0; h<hidden_size; h++){
-                    word_vec[i*hidden_size+h] += input_layer_grad[h];
+                    word_vec[i*hidden_size+h] -= lr*input_layer_grad[h];
                 }
             }
             for(int i=0; i<subword_feature_idx; i++){
                 for(int h=0; h<hidden_size; h++){
-                    subword_vec[i*hidden_size+h] += input_layer_grad[h];
+                    subword_vec[i*hidden_size+h] -= lr*input_layer_grad[h];
                 }
             }
             //update output layer
             for(int l=0; l<n_of_label; l++){
                 for(int h=0; h<hidden_size; h++){
-                    output_layer[l*hidden_size+h] += output_layer_grad[l*hidden_size+h];
+                    output_layer[l*hidden_size+h] -= lr*output_layer_grad[l*hidden_size+h];
                 }
             }
             n_of_local_trained_sample++;
