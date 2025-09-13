@@ -81,6 +81,9 @@ int main(int argc, char** argv){
 
     // Read word file
     FILE* word_fp = fopen(word_file, "rb");
+    if(word_fp==NULL){
+        printf("word file not found\n"); exit(1);
+    }
     char* buff = (char*)calloc(MAX_SENTENCE_LENGTH, sizeof(char));
 
     fgets(buff, MAX_SENTENCE_LENGTH-1, word_fp);
@@ -123,6 +126,9 @@ int main(int argc, char** argv){
 
     // Read subword file
     FILE* subword_fp = fopen(subword_file, "rb");
+    if(subword_file==NULL){
+        printf("subword file not found\n"); exit(1);
+    }
 
     fgets(buff, MAX_SENTENCE_LENGTH-1, subword_fp);
     if(sscanf(buff, "%d %d", &size_of_subword_hash, &hidden_size) != 2){
@@ -150,6 +156,9 @@ int main(int argc, char** argv){
 
     // Read output layer weight file
     FILE* output_layer_fp = fopen(output_weight_file, "rb");
+    if(output_layer_fp==NULL){
+        printf("output layer file not found\n"); exit(1);
+    }
     output_layer_vec = (float*)malloc(sizeof(float)*hidden_size*n_of_label);
     for(int l=0; l<n_of_label; l++){
         fgets(buff, MAX_SENTENCE_LENGTH-1, output_layer_fp);
