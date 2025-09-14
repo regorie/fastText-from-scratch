@@ -244,7 +244,6 @@ int main(int argc, char** argv){
     readWordsFromFile(input_file);
     reduceWords();
     calculateSubwordIDs();
-    buildBinaryTree();
 
     expTable = (float*)malloc((EXP_TABLE_SIZE+1)*sizeof(float));
     for(int i=0; i<EXP_TABLE_SIZE; i++){
@@ -354,8 +353,15 @@ int main(int argc, char** argv){
     if(outfp == NULL) {printf("output layer file open error\n"); exit(1);}
     else{
         for(int i=0; i<n_of_label; i++){
-            for(int h=0; h<hidden_size; h++){
-                fwrite(&output_layer[i*hidden_size+h], sizeof(float), 1, outfp);
+            if(binary){
+                for(int h=0; h<hidden_size; h++){
+                    fwrite(&output_layer[i*hidden_size+h], sizeof(float), 1, outfp);
+                }
+            }
+            else{
+                for(int h=0; h<hidden_size; h++){
+                    fprintf(outfp, "%lf ", output_layer[i*hidden_size+h]);
+                }
             }
             fprintf(outfp, "\n");
         }
