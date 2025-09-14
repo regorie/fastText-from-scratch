@@ -773,7 +773,8 @@ int getSentenceSample(FILE* fp, int* _label, int* sentence, char** unknown_words
     int sentence_length=0;
     int id_found;
     
-    fgets(buff, MAX_SENTENCE_LENGTH-1, fp);
+    char* result = fgets(buff, MAX_SENTENCE_LENGTH-1, fp);
+    if(result==NULL) return -1;
 
     if(strlen(buff)<=1) return -1;
 
