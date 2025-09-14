@@ -175,6 +175,9 @@ int main(int argc, char** argv){
 
     // Read test data file
     FILE* data_fp = fopen(data_file, "rb");
+    if(data_fp==NULL){
+        printf("test data file not found\n"); exit(1);
+    }
     int total_samples=0;
     int correct_samples=0;
     
