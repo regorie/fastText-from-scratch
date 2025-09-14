@@ -128,7 +128,7 @@ void* training_thread(void* id_ptr){
 
             if(lr < starting_lr*0.0001) lr = starting_lr*0.0001;
             if(id==0){
-                printf("\rLearning rate: %f, Progress: %.4f, time: %ld", lr, (float)(n_of_local_trained_sample)/(float)(sample_per_thread), time(NULL)-start);
+                printf("\rLearning rate: %f, Progress: %.4f ( %d / %d ), time: %ld", lr, (float)(n_of_local_trained_sample)/(float)(sample_per_thread), n_of_local_trained_sample, sample_per_thread, time(NULL)-start);
                 fflush(stdout);
             }
 
@@ -798,7 +798,7 @@ int getSentenceSample(FILE* fp, int* _label, int* sentence, char** unknown_words
                 strcpy((unknown_words[sentence_length]), cur_word);
             }
             sentence[sentence_length++] = id_found;
-            if(sentence_length >= MAX_SENTENCE_LENGTH) sentence_length--;
+            if(sentence_length >= MAX_SENTENCE_LENGTH) break;
             if(ch=='\n') return sentence_length;
         }
         else {
