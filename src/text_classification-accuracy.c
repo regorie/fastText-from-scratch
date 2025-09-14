@@ -196,7 +196,7 @@ int main(int argc, char** argv){
         for(int h=0; h<hidden_size; h++){
             sentence_vector[h] = 0.0;
         }
-        while(sscanf(ptr, "%99s%n", curr_word, &n) == 2){
+        while(sscanf(ptr, "%99s%n", curr_word, &n) == 1){
             int oov = 0;
 
             unsigned int hash_key = getHash(curr_word, size_of_word_hash);
