@@ -208,12 +208,12 @@ void* training_thread(void* id_ptr){
             //update in_layers
             for(int i=0; i<word_feature_idx; i++){
                 for(int h=0; h<hidden_size; h++){
-                    word_vec[i*hidden_size+h] -= lr*input_layer_grad[h];
+                    word_vec[word_features[i]*hidden_size+h] -= lr*input_layer_grad[h];
                 }
             }
             for(int i=0; i<subword_feature_idx; i++){
                 for(int h=0; h<hidden_size; h++){
-                    subword_vec[i*hidden_size+h] -= lr*input_layer_grad[h];
+                    subword_vec[subword_features[i]*hidden_size+h] -= lr*input_layer_grad[h];
                 }
             }
             //update output layer
