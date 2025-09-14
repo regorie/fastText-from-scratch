@@ -126,7 +126,7 @@ int main(int argc, char** argv){
 
     // Read subword file
     FILE* subword_fp = fopen(subword_file, "rb");
-    if(subword_file==NULL){
+    if(subword_fp==NULL){
         printf("subword file not found\n"); exit(1);
     }
 
@@ -185,6 +185,7 @@ int main(int argc, char** argv){
     while(fgets(buff, MAX_SENTENCE_LENGTH-1, data_fp)){
         char* ptr = buff;
         int n=0;
+        int n_of_features=0;
         
         // Read label of this sample
         sscanf(ptr, "%99s%n", curr_word, &n);
@@ -206,21 +207,32 @@ int main(int argc, char** argv){
 
             if(oov==0){ // word in vocab
                 for(int h=0; h<hidden_size; h++){
+                    int n_of_subwords=0;
                     sentence_vector[h] += word_vec[word_hash[hash_key]*hidden_size+h];
+
+                    if(utf8_strlen(curr_word)+2 > maxn) n_of_subwords=1;
+                    for(int n=minn; n<=maxn; n++){
+                        if(utf8_strlen(curr_word)+2 < n) break;
+                        n_of_subwords += utf8_strlen(curr_word)+3-n;
+                    }
+                    n_of_features += n_of_subwords;
                 }
             }
             else if (oov==1){ // word not in vocab
-                float oov_word[hidden_size];
+                float oov_word_vec[hidden_size];
                 for(int h=0; h<hidden_size; h++){
-                    oov_word[h] = 0.0;
+                    oov_word_vec[h] = 0.0;
                 }
-                getWordVectorFromString(curr_word, oov_word);
+                n_of_features += getWordVectorFromString(curr_word, oov_word_vec);
                 for(int h=0; h<hidden_size; h++){
-                    sentence_vector[h] += oov_word[h];
+                    sentence_vector[h] += oov_word_vec[h];
                 }
             }    
 
             ptr += n;
+        }
+        for(int h=0; h<hidden_size; h++){
+            sentence_vector[h] *= (1/(float)n_of_features);
         }
 
         // Output layer
@@ -268,7 +280,7 @@ unsigned int getHash(char* word, int max_hash_size){
     return hash_key;
 }
 
-void getWordVectorFromString(char* word, float* result_vec){
+int getWordVectorFromString(char* word, float* result_vec){
 
     char* tmp = (char*)calloc(strlen(word)+3, sizeof(char));
     tmp[0] = BOW;
@@ -283,11 +295,14 @@ void getWordVectorFromString(char* word, float* result_vec){
     unsigned int hash_key;
     char* cur_subword = (char*)malloc(sizeof(char)*MAX_STRING);
 
+    int n_of_features=0;
+
     if(len > maxn){
         hash_key = getHash(tmp, size_of_subword_hash);
         for(int h=0; h<hidden_size; h++){
             result_vec[h] += subword_vec[hash_key*hidden_size+h];
         }
+        n_of_features++;
     }
 
     for(int n=minn; n<maxn; n++){
@@ -307,12 +322,12 @@ void getWordVectorFromString(char* word, float* result_vec){
             for(int h=0; h<hidden_size; h++){
                 result_vec[h] += subword_vec[hash_key*hidden_size+h];
             }
-
+            n_of_features++;
             pos += initial_char_len;
         }
     }
 
     free(tmp);
     free(cur_subword);
-    return;
+    return n_of_features;
 }

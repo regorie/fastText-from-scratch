@@ -14,5 +14,5 @@ struct WORD { // idx is id(hash table)
 
 unsigned int getHash(char* word, int max_hash_size); // calculate hash value
 
-void getWordVectorFromString(char* word, float* result_vec);
+int getWordVectorFromString(char* word, float* result_vec);
 
