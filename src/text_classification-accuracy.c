@@ -237,8 +237,8 @@ int main(int argc, char** argv){
 
         // Output layer
         float prediction[n_of_label];
-        for(int h=0; h<hidden_size; h++){
-            prediction[h] = 0.0;
+        for(int l=0; l<n_of_label; l++){
+            prediction[l] = 0.0;
         }
         for(int l=0; l<n_of_label; l++){
             for(int h=0; h<hidden_size; h++){
