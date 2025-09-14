@@ -15,9 +15,6 @@
 struct WORD { // idx is id(hash table)
     int count;
     char word[MAX_STRING];
-    //char* code;
-    //int codelen;
-    //int* point;
 
     char** subwords;
     unsigned int* subword_ids;
@@ -27,11 +24,6 @@ struct WORD { // idx is id(hash table)
 struct LABEL {
     int count;
     int class_idx;
-    //char label[16];
-
-    char* code;
-    int codelen;
-    int* point;
 };
 
 unsigned int getHash(char* word, int max_hash_size); // calculate hash value
@@ -40,7 +32,6 @@ unsigned int getHash(char* word, int max_hash_size); // calculate hash value
 void readWordsFromFile(char* file_name);
 void reduceWords();
 void calculateSubwordIDs();
-void buildBinaryTree();
 
 void calculateSubwords(char* word, int vocab_id);
 void calculateSubwordsToBuff(char* word, char** subwords);

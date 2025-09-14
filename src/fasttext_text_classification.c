@@ -54,15 +54,6 @@ int epoch;
 float starting_lr;
 float lr;
 
-// subsampling (Do I need this?)
-float sample = 1e-4;
-long long *skip_cnt;
-long long total_skip_cnt=0;
-
-// hierarchical softmax
-float* nodes;
-int n_of_inner_node = 0;
-
 // for efficiency
 float* expTable;
 
@@ -284,16 +275,6 @@ int main(int argc, char** argv){
             output_layer[i*hidden_size+h] = (((random_number & 0xFFFF) / (float)65536) - 0.5) / hidden_size;
         }
     }
-    
-    // Initialize binary tree
-    printf("n_of_inner_node: %d\n", n_of_inner_node);
-    nodes = (float*)malloc(sizeof(float)*n_of_label*n_of_inner_node);
-    for(int a=0; a<n_of_inner_node; a++){
-        for(int b=0; b<n_of_label; b++){
-            random_number = random_number * (unsigned long long)25214903917 + 11;
-            nodes[a*n_of_label + b] = 0.0;
-        }
-    }
 
     // Train
     printf("Training... ");
@@ -372,7 +353,6 @@ int main(int argc, char** argv){
     outfp = fopen(output_file_output_layer, "wb");
     if(outfp == NULL) {printf("output layer file open error\n"); exit(1);}
     else{
-        float current_vetor[hidden_size];
         for(int i=0; i<n_of_label; i++){
             for(int h=0; h<hidden_size; h++){
                 fwrite(&output_layer[i*hidden_size+h], sizeof(float), 1, outfp);
@@ -502,11 +482,6 @@ void readWordsFromFile(char* file_name){
             cur_word[word_length++] = ch;
             if(word_length>=MAX_STRING-3) word_length--;
         }
-    }
-
-    for (int l=0; l<n_of_label; l++){
-        label[l].code = (char*)calloc(MAX_CODE_LENGTH, sizeof(char));
-        label[l].point = (int*)calloc(MAX_CODE_LENGTH, sizeof(int));
     }
 
     free(cur_word);
@@ -657,96 +632,6 @@ void calculateSubwordsToBuff(char* word, char** subwords){
     }
 }
 
-void buildBinaryTree(){
-    printf("building binary tree...\n");
-
-    qsort(label, n_of_label, sizeof(struct LABEL), _comp);
-
-    int pos1, pos2, min1i, min2i;
-    int* count = (int*)calloc(n_of_label*2+1, sizeof(int));
-    int* binary = (int*)calloc(n_of_label*2+1, sizeof(int));
-    int* parent_node = (int*)calloc(n_of_label*2+1, sizeof(int));
-
-    for(int i=0; i<n_of_label; i++){
-        count[i] = label[i].count;
-    }
-    for(int i=n_of_label; i<n_of_label*2; i++){
-        count[i] = INT_MAX;
-    }
-
-    pos1 = n_of_label-1;
-    pos2 = n_of_label;
-    for(int i=0; i<n_of_label; i++){
-        if(pos1 >= 0){ // find min1i
-            if(count[pos1] < count[pos2]){
-                min1i = pos1;
-                pos1--;
-            }
-            else{
-                min1i = pos2;
-                pos2++;
-            }
-        }
-        else{
-            min1i = pos2;
-            pos2++;
-        }
-        if(pos1 >= 0){ // find min2i
-            if(count[pos1] < count[pos2]){
-                min2i = pos1;
-                pos1--;
-            }
-            else{
-                min2i = pos2;
-                pos2++;
-            }
-        }
-        else{
-            min2i = pos2;
-            pos2++;
-        }
-        count[n_of_label+i] = count[min1i] + count[min2i];
-        parent_node[min1i] = n_of_label+i;
-        parent_node[min2i] = n_of_label+i;
-        binary[min2i] = 1; // 1 for right node
-    }
-
-    int b, i;
-    char* code = (char*)calloc(MAX_CODE_LENGTH, sizeof(char));
-    int* point = (int*)calloc(MAX_CODE_LENGTH, sizeof(int));
-
-    for(int a=0; a<n_of_label; a++){
-        b = a;
-        i = 0;
-        while(1){ // find code of a by traversing from 'a' to root (by 'b')
-            code[i] = binary[b];
-            point[i] = b; // point = parent node
-            i++;
-            b = parent_node[b]; // follow parent node -> leads to root
-            if(b==n_of_label*2-2){
-                break;
-            }
-        }
-
-        label[a].codelen = i;
-        label[a].point[0] = n_of_label - 2;
-
-        for( b=0; b<i; b++){
-            label[a].code[i-b-1] = code[b]; // code is written backwards, so flip it!
-            label[a].point[i-b] = point[b] - n_of_label; // storing parent nodes -> the path from root to a
-            if(n_of_inner_node < point[b] - n_of_label) n_of_inner_node = point[b] - n_of_label;
-        }
-    }
-
-    n_of_inner_node += 2;
-    free(count);
-    free(binary);
-    free(parent_node);
-    free(code);
-    free(point);
-    printf("done...\n");
-    return;
-}
 
 int getWordVector(int id, float* result_vec, int* subword_features, int* subword_idx){
     if(id >= n_of_vocab){
@@ -782,7 +667,7 @@ int getWordVectorFromString(char* word, float* result_vec, int* subword_features
 
     unsigned int* subwords_id = (unsigned int*)calloc(_n_of_subwords, sizeof(unsigned int));
     char** subwords = (char**)malloc(sizeof(char*)*_n_of_subwords);
-    char* tmp = (char*)calloc(strlen(word)+3, sizeof(char));
+    char* tmp = (char*)calloc((utf8_strlen(word)+2)*4+1, sizeof(char));
     tmp[0] = BOW;
     strncpy(tmp+1, word, strlen(word));
     tmp[strlen(word)+1] = EOW;
@@ -790,6 +675,7 @@ int getWordVectorFromString(char* word, float* result_vec, int* subword_features
     for(int i=0; i<_n_of_subwords; i++){
         subwords[i] = (char*)calloc((utf8_strlen(word)+2)*4+1, sizeof(char));
     }
+
     calculateSubwordsToBuff(tmp, subwords);
 
     for(int i=0; i<_n_of_subwords; i++){
@@ -834,10 +720,12 @@ void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, fl
             n_of_features += getWordVectorFromString(unknown_words[i], buf_vec, subword_features, subword_idx);
             for(int h=0; h<hidden_size; h++){
                 sent_vec[h] += buf_vec[h];
-            }           
+            }
+            free(unknown_words[i]);
         }
         else{ // word is in vocab
             word_features[*word_idx] = sentence[i];
+            *word_idx += 1;
             n_of_features += getWordVector(sentence[i], buf_vec, subword_features, subword_idx);
             for(int h=0; h<hidden_size; h++){
                 sent_vec[h] += buf_vec[h];
