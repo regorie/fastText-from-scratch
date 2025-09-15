@@ -153,7 +153,7 @@ void* training_thread(void* id_ptr){
             word_features = (int*)malloc(sizeof(int)*word_features_size);
 
             sentence_len = getSentenceSample(infp, &cur_label, sentence, unknown_words);
-            if (sentence_len <= 0) break;
+            if (sentence_len < 0) break;
 
             getSentenceVector(sentence, sentence_len, unknown_words, sentence_vector, 
                 &word_features, &word_feature_idx, &word_features_size, &subword_features, &subword_feature_idx, &subword_features_size);
@@ -839,8 +839,10 @@ int getSentenceSample(FILE* fp, int* _label, int* sentence, char** unknown_words
             sentence[sentence_length] = id_found;
             sentence_length++;
             if(sentence_length >= MAX_SENTENCE_WORD) {
-                int c;
-                while((c=fgetc(fp))!= '\n' && c != EOF){continue;}
+                if(ch != '\n' && ch != EOF){
+                    int c;
+                    while((c=fgetc(fp))!= '\n' && c != EOF){continue;}
+                }
                 free(buff);
                 return sentence_length;
             }
@@ -854,8 +856,10 @@ int getSentenceSample(FILE* fp, int* _label, int* sentence, char** unknown_words
             cur_word[word_length++] = ch;
         }
     }
-    int c;
-    while((c=fgetc(fp))!= '\n' && c != EOF){continue;}
+    if(ch != '\n' && ch != EOF){
+        int c;
+        while((c=fgetc(fp))!= '\n' && c != EOF){continue;}
+    }
     free(buff);
     return sentence_length;
 }
