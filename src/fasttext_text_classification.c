@@ -90,6 +90,7 @@ void* training_thread(void* id_ptr){
     int* sentence = (int*)malloc(sizeof(int)*MAX_SENTENCE_WORD);
     int sentence_len;
     char* unknown_words[MAX_SENTENCE_WORD];
+    for(int i=0; i<MAX_SENTENCE_WORD; i++) unknown_words[i] = NULL;
 
     float sentence_vector[hidden_size];
     int word_features[MAX_SENTENCE_WORD];
@@ -291,7 +292,7 @@ int main(int argc, char** argv){
     }
     time_t end_time = time(NULL);
     printf("\n Training done... took %ld, last learning rate: %f\n", end_time-start_time, lr);
-
+    free(threads);
 
     // 3. Save vectors
     strcat(output_file_subword, output_file);
@@ -727,7 +728,6 @@ void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, fl
             for(int h=0; h<hidden_size; h++){
                 sent_vec[h] += buf_vec[h];
             }
-            free(unknown_words[i]);
         }
         else{ // word is in vocab
             word_features[*word_idx] = sentence[i];
@@ -743,6 +743,12 @@ void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, fl
         sent_vec[h] *= (1/(float)n_of_features);
     }
 
+    for(int i=0; i<MAX_SENTENCE_WORD; i++){
+        if(unknown_words[i] != NULL){
+            free(unknown_words[i]);
+            unknown_words[i] = NULL;
+        }
+    }
     return;
 }
 
@@ -795,6 +801,9 @@ int getSentenceSample(FILE* fp, int* _label, int* sentence, char** unknown_words
 
             id_found = wordToID(cur_word);
             if(id_found==-1){
+                if(unknown_words[sentence_length] != NULL){
+                    free(unknown_words[sentence_length]);
+                }
                 unknown_words[sentence_length] = (char*)calloc(MAX_STRING, sizeof(char));
                 strcpy((unknown_words[sentence_length]), cur_word);
             }
