@@ -89,10 +89,6 @@ void* training_thread(void* id_ptr){
 
     int* sentence = (int*)malloc(sizeof(int)*MAX_SENTENCE_WORD);
     int sentence_len;
-    char* unknown_words[MAX_SENTENCE_WORD];
-    for(int i=0; i<MAX_SENTENCE_WORD; i++){
-        unknown_words[i] = NULL;
-    }
 
     float sentence_vector[hidden_size];
     int word_features[MAX_SENTENCE_WORD];
@@ -146,11 +142,9 @@ void* training_thread(void* id_ptr){
             }
 
             // forward pass
+            char** unknown_words = (char**)malloc(sizeof(char*)*MAX_SENTENCE_WORD);
             for(int i=0; i<MAX_SENTENCE_WORD; i++) {
-                if(unknown_words[i] != NULL){
-                    free(unknown_words[i]);
-                    unknown_words[i] = NULL;
-                }
+                unknown_words[i] = NULL;
             }
             sentence_len = getSentenceSample(infp, &cur_label, sentence, unknown_words);
             if (sentence_len <= 0) break;
@@ -223,6 +217,11 @@ void* training_thread(void* id_ptr){
                 }
             }
             n_of_local_trained_sample++;
+
+            for(int i=0; i<MAX_SENTENCE_WORD; i++) {
+                if(unknown_words[i] != NULL) free(unknown_words[i]);
+            }
+            free(unknown_words);
         }
     }
     fclose(infp);
