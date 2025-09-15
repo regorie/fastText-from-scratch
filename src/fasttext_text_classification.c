@@ -156,7 +156,7 @@ void* training_thread(void* id_ptr){
             if (sentence_len <= 0) break;
 
             getSentenceVector(sentence, sentence_len, unknown_words, sentence_vector, 
-                word_features, &word_feature_idx, word_features_size, subword_features, &subword_feature_idx, &subword_features_size);
+                word_features, &word_feature_idx, &word_features_size, subword_features, &subword_feature_idx, &subword_features_size);
 
             for(int i=0; i<MAX_SENTENCE_WORD; i++) {
                 if(unknown_words[i] != NULL) free(unknown_words[i]);
@@ -748,7 +748,7 @@ void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, fl
     for(int i=0; i<sentence_len; i++){
         // if the word is not in vocab
         if(sentence[i] == -1){
-            n_of_features += getWordVectorFromString(unknown_words[i], buf_vec, subword_features, subword_idx, &subword_features_size);
+            n_of_features += getWordVectorFromString(unknown_words[i], buf_vec, subword_features, subword_idx, subword_features_size);
             for(int h=0; h<hidden_size; h++){
                 sent_vec[h] += buf_vec[h];
             }
@@ -760,7 +760,7 @@ void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, fl
             }
             word_features[*word_idx] = sentence[i];
             *word_idx += 1;
-            n_of_features += getWordVector(sentence[i], buf_vec, subword_features, subword_idx, &subword_features_size);
+            n_of_features += getWordVector(sentence[i], buf_vec, subword_features, subword_idx, subword_features_size);
             for(int h=0; h<hidden_size; h++){
                 sent_vec[h] += buf_vec[h];
             }
