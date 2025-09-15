@@ -90,7 +90,7 @@ void* training_thread(void* id_ptr){
     int* sentence = (int*)malloc(sizeof(int)*MAX_SENTENCE_WORD);
     int sentence_len;
     char* unknown_words[MAX_SENTENCE_WORD];
-    for(int i=0; i<MAX_SENTENCE_LENGTH; i++){
+    for(int i=0; i<MAX_SENTENCE_WORD; i++){
         unknown_words[i] = NULL;
     }
 
