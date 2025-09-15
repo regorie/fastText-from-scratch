@@ -90,6 +90,9 @@ void* training_thread(void* id_ptr){
     int* sentence = (int*)malloc(sizeof(int)*MAX_SENTENCE_WORD);
     int sentence_len;
     char* unknown_words[MAX_SENTENCE_WORD];
+    for(int i=0; i<MAX_SENTENCE_LENGTH; i++){
+        unknown_words[i] = NULL;
+    }
 
     float sentence_vector[hidden_size];
     int word_features[MAX_SENTENCE_WORD];
@@ -143,7 +146,12 @@ void* training_thread(void* id_ptr){
             }
 
             // forward pass
-            for(int i=0; i<MAX_SENTENCE_WORD; i++) unknown_words[i] = NULL;
+            for(int i=0; i<MAX_SENTENCE_WORD; i++) {
+                if(unknown_words[i] != NULL){
+                    free(unknown_words[i]);
+                    unknown_words[i] = NULL;
+                }
+            }
             sentence_len = getSentenceSample(infp, &cur_label, sentence, unknown_words);
             if (sentence_len <= 0) break;
 
@@ -803,13 +811,22 @@ int getSentenceSample(FILE* fp, int* _label, int* sentence, char** unknown_words
             if(id_found==-1){
                 if(unknown_words[sentence_length] != NULL){
                     free(unknown_words[sentence_length]);
+                    unknown_words[sentence_length] = NULL;
                 }
                 unknown_words[sentence_length] = (char*)calloc(MAX_STRING, sizeof(char));
                 strcpy((unknown_words[sentence_length]), cur_word);
             }
             sentence[sentence_length++] = id_found;
-            if(sentence_length >= MAX_SENTENCE_WORD) break;
-            if(ch=='\n') return sentence_length;
+            if(sentence_length >= MAX_SENTENCE_WORD-1) {
+                int c;
+                while((c=fgetc(fp))!= '\n' && c != EOF);
+                free(buff);
+                return sentence_length;
+            }
+            if(ch=='\n') {
+                free(buff);
+                return sentence_length;
+            }
         }
         else {
             if(word_length >= MAX_STRING-3) word_length--;
