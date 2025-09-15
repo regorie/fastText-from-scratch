@@ -808,7 +808,7 @@ int getSentenceSample(FILE* fp, int* _label, int* sentence, char** unknown_words
                 strcpy((unknown_words[sentence_length]), cur_word);
             }
             sentence[sentence_length++] = id_found;
-            if(sentence_length >= MAX_SENTENCE_LENGTH) break;
+            if(sentence_length >= MAX_SENTENCE_WORD) break;
             if(ch=='\n') return sentence_length;
         }
         else {
