@@ -346,7 +346,7 @@ int main(int argc, char** argv){
         float target_vector[hidden_size];
         for(int i=0; i<n_of_vocab; i++){
             tmp2=0;
-            getWordVector(i, target_vector, tmp, &tmp2, &tmp3);
+            getWordVector(i, target_vector, &tmp, &tmp2, &tmp3);
 
             fprintf(outfp, "%s ", vocab[i].word);
             if(binary) {
