@@ -751,9 +751,9 @@ void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, fl
         sent_vec[h] *= (1/(float)n_of_features);
     }
 
-    for(int i=0; i<MAX_SENTENCE_WORD; i++){
+    for(int i=0; i<sentence_len; i++){
         if(unknown_words[i] != NULL){
-            free(unknown_words[i]); // problem here
+            free(unknown_words[i]);
             unknown_words[i] = NULL;
         }
     }
@@ -819,7 +819,7 @@ int getSentenceSample(FILE* fp, int* _label, int* sentence, char** unknown_words
             sentence[sentence_length++] = id_found;
             if(sentence_length >= MAX_SENTENCE_WORD-1) {
                 int c;
-                while((c=fgetc(fp))!= '\n' && c != EOF);
+                while((c=fgetc(fp))!= '\n' && c != EOF){continue;}
                 free(buff);
                 return sentence_length;
             }
