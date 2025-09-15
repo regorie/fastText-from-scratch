@@ -156,7 +156,7 @@ void* training_thread(void* id_ptr){
             if (sentence_len <= 0) break;
 
             getSentenceVector(sentence, sentence_len, unknown_words, sentence_vector, 
-                word_features, &word_feature_idx, &word_features_size, subword_features, &subword_feature_idx, &subword_features_size);
+                &word_features, &word_feature_idx, &word_features_size, &subword_features, &subword_feature_idx, &subword_features_size);
 
             for(int i=0; i<MAX_SENTENCE_WORD; i++) {
                 if(unknown_words[i] != NULL) free(unknown_words[i]);
@@ -656,7 +656,7 @@ void calculateSubwordsToBuff(char* word, char** subwords){
 }
 
 
-int getWordVector(int id, float* result_vec, int* subword_features, int* subword_idx, int* subword_features_size){
+int getWordVector(int id, float* result_vec, int** subword_features, int* subword_idx, int* subword_features_size){
     if(id >= n_of_vocab){
         printf("ID out of bound\n");
         exit(1);
@@ -669,9 +669,9 @@ int getWordVector(int id, float* result_vec, int* subword_features, int* subword
     for(int i=0; i< vocab[id].n_of_subwords; i++){
         if(*subword_idx >= *subword_features_size -1){
             *subword_features_size += 1024;
-            subword_features = (int*)realloc(subword_features, sizeof(int)*(*subword_features_size));
+            *subword_features = realloc(*subword_features, sizeof(int)*(*subword_features_size));
         }
-        subword_features[*subword_idx] = vocab[id].subword_ids[i];
+        (*subword_features)[*subword_idx] = vocab[id].subword_ids[i];
         *subword_idx += 1;
         for(int h=0; h<hidden_size; h++){
             result_vec[h] += subword_vec[hidden_size*vocab[id].subword_ids[i] + h];
@@ -684,7 +684,7 @@ int getWordVector(int id, float* result_vec, int* subword_features, int* subword
     return vocab[id].n_of_subwords+1;
 }
 
-int getWordVectorFromString(char* word, float* result_vec, int* subword_features, int* subword_idx, int* subword_features_size){
+int getWordVectorFromString(char* word, float* result_vec, int** subword_features, int* subword_idx, int* subword_features_size){
     int _n_of_subwords = 0;
     if(utf8_strlen(word)+2 > maxn) _n_of_subwords=1;
     for (int n=minn; n<=maxn; n++){
@@ -715,9 +715,9 @@ int getWordVectorFromString(char* word, float* result_vec, int* subword_features
     for(int i=0; i<_n_of_subwords; i++){
         if(*subword_idx >= *subword_features_size -1){
             *subword_features_size += 1024;
-            subword_features = (int*)realloc(subword_features, sizeof(int)*(*subword_features_size));
+            *subword_features = realloc(*subword_features, sizeof(int)*(*subword_features_size));
         }
-        subword_features[*subword_idx] = subwords_id[i];
+        (*subword_features)[*subword_idx] = subwords_id[i];
         *subword_idx += 1;
         for(int h=0; h<hidden_size; h++){
             result_vec[h] += subword_vec[hidden_size*subwords_id[i] + h];
@@ -734,7 +734,7 @@ int getWordVectorFromString(char* word, float* result_vec, int* subword_features
     return _n_of_subwords;
 }
 
-void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, float* sent_vec, int* word_features, int* word_idx, int* word_features_size, int* subword_features, int* subword_idx, int* subword_features_size){
+void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, float* sent_vec, int** word_features, int* word_idx, int* word_features_size, int** subword_features, int* subword_idx, int* subword_features_size){
     float buf_vec[hidden_size];
     *subword_idx=0;
     *word_idx=0;
@@ -756,9 +756,9 @@ void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, fl
         else{ // word is in vocab
             if(*word_idx >= *word_features_size -1){
                 *word_features_size += 1024;
-                word_features = (int*)realloc(word_features, sizeof(int)*(*word_features_size));
+                *word_features = realloc(*word_features, sizeof(int)*(*word_features_size));
             }
-            word_features[*word_idx] = sentence[i];
+            (*word_features)[*word_idx] = sentence[i];
             *word_idx += 1;
             n_of_features += getWordVector(sentence[i], buf_vec, subword_features, subword_idx, subword_features_size);
             for(int h=0; h<hidden_size; h++){

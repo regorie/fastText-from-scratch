@@ -36,9 +36,9 @@ void calculateSubwordIDs();
 void calculateSubwords(char* word, int vocab_id);
 void calculateSubwordsToBuff(char* word, char** subwords);
 
-int getWordVector(int id, float* result_vec, int* subword_features, int* subword_idx, int* subword_features_size);
-int getWordVectorFromString(char* word, float* result_vec, int* subword_features, int* subword_idx, int* subword_features_size);
-void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, float* sent_vec, int* word_features, int* word_feature_idx, int* word_features_size, int* subword_features, int* subword_feature_idx, int* subword_features_size);
+int getWordVector(int id, float* result_vec, int** subword_features, int* subword_idx, int* subword_features_size);
+int getWordVectorFromString(char* word, float* result_vec, int** subword_features, int* subword_idx, int* subword_features_size);
+void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, float* sent_vec, int** word_features, int* word_feature_idx, int* word_features_size, int** subword_features, int* subword_feature_idx, int* subword_features_size);
 
 int getSentenceSample(FILE* fp, int* _label, int* sentence, char** unknown_words);
 
