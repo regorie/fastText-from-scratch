@@ -25,6 +25,7 @@ int min_count=5;
 char BOW = '<';
 char EOW = '>';
 int minn = 3, maxn = 6;
+int bigram = 0;
 
 struct WORD* vocab;
 int size_of_vocab = 2048;
@@ -238,15 +239,16 @@ void* training_thread(void* id_ptr){
 
 int main(int argc, char** argv){
     if(argc < 6){
-        printf("Usage example: ./fasttext-text hidden_size thread_number epoch data_file output_file\n");
+        printf("Usage example: ./fasttext-text hidden_size bigram thread_number epoch data_file output_file\n");
         return -1;
     }
     else{
         hidden_size = atoi(argv[1]);
-        n_of_thread = atoi(argv[2]);
-        epoch = atoi(argv[3]);
-        strcpy(input_file, argv[4]);
-        strcpy(output_file, argv[5]);
+        bigram = atoi(argv[2]);
+        n_of_thread = atoi(argv[3]);
+        epoch = atoi(argv[4]);
+        strcpy(input_file, argv[5]);
+        strcpy(output_file, argv[6]);
     }
     starting_lr = 0.05;
     lr=starting_lr;
@@ -740,17 +742,45 @@ void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, fl
     *word_idx=0;
     n_of_features = 0;
 
+    char* bigram_buff[2];
+    bigram_buff[0] = (char*)calloc(MAX_STRING*2+1, sizeof(char));
+    bigram_buff[1] = (char*)calloc(MAX_STRING*2+1, sizeof(char));
+    int bigram_len[2] = {0, 0};
+    int marker=0;
+
     // reset sentence vector first
     for(int h=0; h<hidden_size; h++){
         sent_vec[h] = 0.0;
     }
 
     for(int i=0; i<sentence_len; i++){
-        // if the word is not in vocab
-        if(sentence[i] == -1){
+        marker = (marker+1)%2;
+        if(sentence[i] == -1){ // if the word is not in vocab
             n_of_features += getWordVectorFromString(unknown_words[i], buf_vec, subword_features, subword_idx, subword_features_size);
             for(int h=0; h<hidden_size; h++){
                 sent_vec[h] += buf_vec[h];
+            }
+            if(bigram==1){
+                if(i>0){
+                    strcpy(bigram_buff[marker]+bigram_len[marker], unknown_words[i]);
+                    bigram_len[marker] += strlen(unknown_words[i]);
+                    unsigned int bigram_key = getHash(bigram_buff[marker], size_of_subword_hash);
+                    if(*subword_idx >= *subword_features_size -1){
+                        *subword_features_size += 1024;
+                        *subword_features = realloc(*subword_features, sizeof(int)*(*subword_features_size));
+                    }
+                    (*subword_features)[*subword_idx++] = bigram_key;
+                    for(int h=0; h<hidden_size; h++){
+                        sent_vec[h] += subword_vec[bigram_key*hidden_size+h];
+                    }
+                    for(int j=0; j<bigram_len[marker]; j++){
+                        bigram_buff[marker][j]=0;
+                    }
+                    bigram_len[marker] = 0;
+                }
+                strcpy(bigram_buff[(marker+1)%2], unknown_words[i]);
+                bigram_buff[(marker+1)%2][strlen(unknown_words[i])] = '_';
+                bigram_len[(marker+1)%2] = strlen(unknown_words[i])+1;
             }
         }
         else{ // word is in vocab
@@ -763,6 +793,28 @@ void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, fl
             n_of_features += getWordVector(sentence[i], buf_vec, subword_features, subword_idx, subword_features_size);
             for(int h=0; h<hidden_size; h++){
                 sent_vec[h] += buf_vec[h];
+            }
+            if(bigram==1){
+                if(i>0){
+                    strcpy(bigram_buff[marker]+bigram_len[marker], unknown_words[i]);
+                    bigram_len[marker] += strlen(unknown_words[i]);
+                    unsigned int bigram_key = getHash(bigram_buff[marker], size_of_subword_hash);
+                    (*subword_features)[*subword_idx++] = bigram_key;
+                    if(*subword_idx >= *subword_features_size -1){
+                        *subword_features_size += 1024;
+                        *subword_features = realloc(*subword_features, sizeof(int)*(*subword_features_size));
+                    }
+                    for(int h=0; h<hidden_size; h++){
+                        sent_vec[h] += subword_vec[bigram_key*hidden_size+h];
+                    }
+                    for(int j=0; j<bigram_len[marker]; j++){
+                        bigram_buff[marker][j]=0;
+                    }
+                    bigram_len[marker] = 0;
+                }
+                strcpy(bigram_buff[(marker+1)%2], unknown_words[i]);
+                bigram_buff[(marker+1)%2][strlen(unknown_words[i])] = '_';
+                bigram_len[(marker+1)%2] = strlen(unknown_words[i])+1;
             }
         }
     }
@@ -777,6 +829,9 @@ void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, fl
             unknown_words[i] = NULL;
         }
     }
+
+    free(bigram_buff[0]);
+    free(bigram_buff[1]);
     return;
 }
 
