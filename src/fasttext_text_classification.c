@@ -769,7 +769,7 @@ void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, fl
                         *subword_features_size += 1024;
                         *subword_features = realloc(*subword_features, sizeof(int)*(*subword_features_size));
                     }
-                    (*subword_features)[*subword_idx++] = bigram_key;
+                    (*subword_features)[(*subword_idx)++] = bigram_key;
                     for(int h=0; h<hidden_size; h++){
                         sent_vec[h] += subword_vec[bigram_key*hidden_size+h];
                     }
@@ -777,6 +777,7 @@ void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, fl
                         bigram_buff[marker][j]=0;
                     }
                     bigram_len[marker] = 0;
+                    n_of_features++;
                 }
                 strcpy(bigram_buff[(marker+1)%2], unknown_words[i]);
                 bigram_buff[(marker+1)%2][strlen(unknown_words[i])] = '_';
@@ -799,7 +800,7 @@ void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, fl
                     strcpy(bigram_buff[marker]+bigram_len[marker], vocab[sentence[i]].word);
                     bigram_len[marker] += strlen(vocab[sentence[i]].word);
                     unsigned int bigram_key = getHash(bigram_buff[marker], size_of_subword_hash);
-                    (*subword_features)[*subword_idx++] = bigram_key;
+                    (*subword_features)[(*subword_idx)++] = bigram_key;
                     if(*subword_idx >= *subword_features_size -1){
                         *subword_features_size += 1024;
                         *subword_features = realloc(*subword_features, sizeof(int)*(*subword_features_size));
@@ -811,6 +812,7 @@ void getSentenceVector(int* sentence, int sentence_len, char** unknown_words, fl
                         bigram_buff[marker][j]=0;
                     }
                     bigram_len[marker] = 0;
+                    n_of_features++;
                 }
                 strcpy(bigram_buff[(marker+1)%2], vocab[sentence[i]].word);
                 bigram_buff[(marker+1)%2][strlen(vocab[sentence[i]].word)] = '_';
